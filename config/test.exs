@@ -36,5 +36,5 @@ config :logger, level: :warning
 config :phoenix, :plug_init_mode, :runtime
 
 config :openai,
-  api_key: System.get_env("OPENAI_API_KEY"),
+  api_key: "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",
   http_options: [recv_timeout: 30_000]

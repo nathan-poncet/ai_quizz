@@ -1,5 +1,6 @@
 defmodule AiQuizz.Games do
   require Logger
+  alias AiQuizz.Games.GamePlayer
   alias AiQuizzWeb.Presence
   alias Ecto.Changeset
   alias AiQuizz.Games.{Game, Server, ServerSupervisor}
@@ -129,7 +130,7 @@ defmodule AiQuizz.Games do
 
   """
   @spec join_game(String.t(), String.t(), String.t(), String.t()) ::
-          {:ok, Game.t()} | {:error, any()}
+          {:ok, GamePlayer.t()} | {:error, any()}
   def join_game(game_id, user_id, socket_id, name) do
     with {:ok, game_server} <- server(game_id),
          {:ok, _player} = join <- Server.join(game_server, user_id, socket_id, name) do

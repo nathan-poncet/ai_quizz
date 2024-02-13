@@ -30,6 +30,9 @@ defmodule AiQuizz.Games.GamePlayers do
         players = players ++ [player]
         {:ok, players}
 
+      {false, true, true} ->
+        {:ok, players}
+
       {true, _, _} ->
         {:error, :socket_is_already_in_the_game}
 

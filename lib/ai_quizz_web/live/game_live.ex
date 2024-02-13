@@ -10,8 +10,8 @@ defmodule AiQuizzWeb.GameLive do
   def render(assigns) do
     ~H"""
     <h1>Hi from game <%= @code %></h1>
-    <p><%= inspect(@socket) %></p>
     <h2>Users</h2>
+    <pre><%= inspect(@socket.id) %></pre>
     <ul id="users" phx-update="stream">
       <li :for={{dom_id, %{id: id, metas: metas}} <- @streams.presences} id={dom_id}>
         <%= id %> (<%= length(metas) %>)
@@ -25,18 +25,26 @@ defmodule AiQuizzWeb.GameLive do
   def mount(%{"id" => game_code}, _session, socket) do
     socket = stream(socket, :presences, [])
 
-    {:ok, socket}
-
     socket =
       if connected?(socket) do
-        email = socket.assigns.current_user.email
-        Games.subscribe(game_code, email)
+        socket_id = socket.id
+        user_id = socket.assigns.current_user.id
+        user_email = socket.assigns.current_user.email
 
-        stream(
-          socket,
-          :presences,
-          Games.list_presence(game_code)
-        )
+        socket =
+          case Games.join_game(game_code, user_id, socket_id, user_email) do
+            {:ok, player} ->
+              socket |> assign(:player, player)
+
+            {:error, reason} ->
+              Logger.error("Failed to join game: #{inspect(reason)}")
+
+              socket
+              |> put_flash(:error, "Failed to join game: #{inspect(reason)}")
+              |> redirect(to: ~p"/")
+          end
+
+        stream(socket, :presences, Games.list_presence(game_code))
       else
         socket
       end
