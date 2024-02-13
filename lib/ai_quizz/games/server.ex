@@ -59,7 +59,8 @@ defmodule AiQuizz.Games.Server do
   end
 
   def handle_call({:join, user_id, socket_id, name}, _from, game) do
-    new_player = GamePlayer.new(user_id, socket_id, name)
+    new_player =
+      GamePlayer.new(%GamePlayer{user_id: user_id, socket_id: socket_id, username: name})
 
     case GamePlayers.add_player(game.players, new_player) do
       {:ok, players} ->

@@ -2,10 +2,7 @@ defmodule AiQuizz.Games.GameTest do
   use ExUnit.Case
   import Mock
 
-  alias AiQuizz.Games.GamePlayer
-  alias AiQuizz.Games.GameQuestions
-  alias AiQuizz.Games.GameQuestion
-  alias AiQuizz.Games.Game
+  alias AiQuizz.Games.{Game, GamePlayer, GameQuestion, GameQuestions}
 
   setup_with_mocks([
     {GameQuestions, [],
@@ -92,27 +89,27 @@ defmodule AiQuizz.Games.GameTest do
   test "answer" do
     game = %Game{
       current_question: 0,
-      players: [%GamePlayer{id: "player_id", status: :playing}],
+      players: [%GamePlayer{id: "player_id", answers: [nil, nil]}],
       questions: [
         %GameQuestion{question: "question 1", answer: "answer 1"},
         %GameQuestion{question: "question 2", answer: "answer 2"}
       ],
-      status: :in_play
+      status: :in_play_response
     }
 
     expected_game = %Game{
       game
-      | players: [%GamePlayer{id: "player_id", answers: ["answer 1"], status: :playing}]
+      | players: [%GamePlayer{id: "player_id", answers: [1, nil]}]
     }
 
     assert {:ok, ^expected_game} =
-             Game.answer(game, "player_id", "answer 1")
+             Game.answer(game, "player_id", 1)
   end
 
   test "answer when game is timeout" do
     game = %Game{
       current_question: 0,
-      players: [%GamePlayer{id: "player_id"}],
+      players: [%GamePlayer{id: "player_id", answers: [nil, nil]}],
       questions: [
         %GameQuestion{question: "question 1", answer: "answer 1"},
         %GameQuestion{question: "question 2", answer: "answer 2"}
@@ -121,16 +118,20 @@ defmodule AiQuizz.Games.GameTest do
     }
 
     assert {:error, :timeout} =
-             Game.answer(game, "player_id", "answer 1")
+             Game.answer(game, "player_id", 2)
   end
 
   test "answer when game is not in play" do
     game = %Game{current_question: 0, status: :lobby}
-    assert {:error, :game_is_not_in_play} = Game.answer(game, "player_id", "answer 1")
+    assert {:error, :wrong_status} = Game.answer(game, "player_id", "answer 1")
   end
 
   test "answer when player is not in the game" do
-    game = %Game{current_question: 0, players: [%GamePlayer{id: "player_id"}], status: :in_play}
+    game = %Game{
+      current_question: 0,
+      players: [%GamePlayer{id: "player_id"}],
+      status: :in_play_response
+    }
 
     assert {:error, :player_is_not_in_the_game} =
              Game.answer(game, "wrong_player_id", "answer 1")

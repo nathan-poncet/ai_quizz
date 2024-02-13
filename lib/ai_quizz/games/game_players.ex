@@ -2,6 +2,20 @@ defmodule AiQuizz.Games.GamePlayers do
   alias AiQuizz.Games.GamePlayer
 
   @doc """
+  update the answer of a player.
+  """
+  @spec add_answer([GamePlayer.t()], String.t(), Integer.t(), Integer.t()) :: [GamePlayer.t()]
+  def add_answer(players, player_id, current_question, answer) do
+    Enum.map(players, fn player ->
+      if player.id == player_id do
+        GamePlayer.add_answer(player, current_question, answer)
+      else
+        player
+      end
+    end)
+  end
+
+  @doc """
   Add a player to the game.
   """
   @spec add_player([GamePlayer.t()], GamePlayer.t()) :: {:ok, [GamePlayer.t()]} | {:error, atom()}
@@ -32,6 +46,8 @@ defmodule AiQuizz.Games.GamePlayers do
 
   def add_player(_players, %GamePlayer{username: ""}),
     do: {:error, :username_not_provided}
+
+  # Private functions
 
   @spec socket_exists?([GamePlayer.t()], GamePlayer.t()) :: boolean()
   defp socket_exists?(players, %GamePlayer{socket_id: socket_id}),

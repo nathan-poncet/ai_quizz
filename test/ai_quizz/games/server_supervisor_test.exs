@@ -1,5 +1,19 @@
 defmodule AiQuizz.Games.ServerSupervisorTest do
   use ExUnit.Case
+  import Mock
+
+  alias AiQuizz.Games.{GameQuestion, GameQuestions}
+
+  setup_with_mocks([
+    {GameQuestions, [],
+     [
+       generate: fn %{topic: _, difficulty: _, nb_questions: nb_question} ->
+         List.duplicate(%GameQuestion{}, nb_question)
+       end
+     ]}
+  ]) do
+    :ok
+  end
 
   test "start_child/1 starts a new game server" do
     children = DynamicSupervisor.which_children(AiQuizz.Games.ServerSupervisor)

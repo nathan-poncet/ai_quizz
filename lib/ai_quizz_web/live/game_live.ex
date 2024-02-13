@@ -10,6 +10,7 @@ defmodule AiQuizzWeb.GameLive do
   def render(assigns) do
     ~H"""
     <h1>Hi from game <%= @code %></h1>
+    <p><%= inspect(@socket) %></p>
     <h2>Users</h2>
     <ul id="users" phx-update="stream">
       <li :for={{dom_id, %{id: id, metas: metas}} <- @streams.presences} id={dom_id}>
@@ -24,7 +25,7 @@ defmodule AiQuizzWeb.GameLive do
   def mount(%{"id" => game_code}, _session, socket) do
     socket = stream(socket, :presences, [])
 
-    # TODO: join
+    {:ok, socket}
 
     socket =
       if connected?(socket) do

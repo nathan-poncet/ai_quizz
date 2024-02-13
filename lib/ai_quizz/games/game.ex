@@ -2,6 +2,7 @@ defmodule AiQuizz.Games.Game do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias AiQuizz.Games.GamePlayers
   alias AiQuizz.Games.{Game, GamePlayer, GameQuestion, GameQuestions}
 
   @id_length 16
@@ -31,13 +32,13 @@ defmodule AiQuizz.Games.Game do
   Add an answer for a player to the game.
   """
   @spec answer(Game.t(), String.t(), Integer.t()) :: {:ok, Game.t()} | {:error, atom()}
-  def answer(%Game{players: players, status: :in_play} = game, player_id, answer) do
+  def answer(%Game{players: players, status: :in_play_response} = game, player_id, answer) do
     case Enum.find(players, fn player -> player.id == player_id end) do
       nil ->
         {:error, :player_is_not_in_the_game}
 
-      player ->
-        update_answer(game, player, answer)
+      _player ->
+        {:ok, update_answer(game, player_id, answer)}
     end
   end
 
@@ -45,7 +46,7 @@ defmodule AiQuizz.Games.Game do
     do: {:error, :timeout}
 
   def answer(_game, _player_id, _answer),
-    do: {:error, :game_is_not_in_play}
+    do: {:error, :wrong_status}
 
   @doc """
   Finish the game.
@@ -129,7 +130,12 @@ defmodule AiQuizz.Games.Game do
   """
   @spec start(Game.t()) :: {:ok, Game.t()} | {:error, atom()}
   def start(%Game{status: :lobby} = game) do
-    {:ok, %Game{game | status: :in_play}}
+    new_players =
+      Enum.map(game.players, fn player ->
+        %GamePlayer{player | answers: Enum.to_list(1..length(game.questions))}
+      end)
+
+    {:ok, %Game{game | players: new_players, status: :in_play}}
   end
 
   def start(%Game{}),
@@ -173,20 +179,12 @@ defmodule AiQuizz.Games.Game do
 
   # Private functions
 
-  @spec update_answer(Game.t(), GamePlayer.t(), Integer.t()) :: {:ok, Game.t()} | {:error, any()}
-  defp update_answer(%Game{players: players} = game, player, answer) do
-    case GamePlayer.add_answer(player, answer) do
-      {:ok, answered_player} ->
-        players =
-          Enum.map(players, fn player ->
-            if player.id == answered_player.id, do: answered_player, else: player
-          end)
+  @spec update_answer(Game.t(), String.t(), Integer.t()) :: Game.t()
+  defp update_answer(%Game{players: players} = game, player_id, answer) do
+    new_players =
+      GamePlayers.add_answer(players, player_id, game.current_question, answer)
 
-        {:ok, %Game{game | players: players}}
-
-      {:error, error} ->
-        {:error, error}
-    end
+    %Game{game | players: new_players}
   end
 
   @spec uuid() :: String.t()

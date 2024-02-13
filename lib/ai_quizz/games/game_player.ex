@@ -12,19 +12,15 @@ defmodule AiQuizz.Games.GamePlayer do
     field :user_id, :string, default: ""
     field :username, :string, default: ""
     field :answers, {:array, :string}, default: []
-    field :status, Ecto.Enum, values: [:waiting, :playing], default: :waiting
   end
 
-  @spec add_answer(GamePlayer.t(), String.t()) :: {:ok, GamePlayer.t()} | {:error, atom()}
-  def add_answer(%GamePlayer{status: :playing} = player, answer),
-    do: {:ok, %GamePlayer{player | answers: player.answers ++ [answer]}}
+  @spec add_answer(GamePlayer.t(), Integer.t(), Integer.t()) :: GamePlayer.t()
+  def add_answer(%GamePlayer{} = player, current_question, answer),
+    do: %GamePlayer{player | answers: List.replace_at(player.answers, current_question, answer)}
 
-  def add_answer(%GamePlayer{}, _answer),
-    do: {:error, :player_is_not_playing}
-
-  @spec new(String.t(), String.t(), String.t()) :: GamePlayer.t()
-  def new(user_id, socket_id, username) do
-    %GamePlayer{id: uuid(), user_id: user_id, socket_id: socket_id, username: username}
+  @spec new(GamePlayer.t()) :: GamePlayer.t()
+  def new(%GamePlayer{} = player) do
+    %GamePlayer{player | id: uuid()}
   end
 
   @spec registration_changeset(GamePlayer.t(), map) :: Ecto.Changeset.t()

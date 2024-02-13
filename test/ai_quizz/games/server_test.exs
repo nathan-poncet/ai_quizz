@@ -1,9 +1,5 @@
 defmodule AiQuizz.Games.ServerTest do
-  alias AiQuizz.Games.GamePlayer
-  alias AiQuizz.Games.GameQuestions
-  alias AiQuizz.Games.Game
-  alias AiQuizz.Games.GameQuestion
-  alias AiQuizz.Games.Server
+  alias AiQuizz.Games.{Game, GamePlayer, GameQuestions, GameQuestion, Server}
 
   use ExUnit.Case, async: true
   import Mock
@@ -51,8 +47,19 @@ defmodule AiQuizz.Games.ServerTest do
     {:ok, pid} =
       Server.start_link(params: %{topic: "Maths", difficulty: :easy, nb_questions: 2})
 
-    assert {:ok, game} = Server.join(pid, "player_id", self())
-    assert game.players == [%GamePlayer{id: "player_id", answers: [], status: :playing}]
+    assert {:ok, player} = Server.join(pid, "player_user_id", "player_socket", "username")
+
+    game = Server.game(pid)
+
+    assert [
+             %GamePlayer{
+               answers: [],
+               id: player.id,
+               user_id: "player_user_id",
+               socket_id: "player_socket",
+               username: "username"
+             }
+           ] == game.players
   end
 
   test "join when game has already started" do
@@ -61,7 +68,7 @@ defmodule AiQuizz.Games.ServerTest do
 
     {:ok, _game} = Server.start(pid)
 
-    assert {:ok, _game} = Server.join(pid, "player_id", self())
+    assert {:ok, _game} = Server.join(pid, "player_user_id", "player_socket", "username")
   end
 
   test "game" do
@@ -87,31 +94,10 @@ defmodule AiQuizz.Games.ServerTest do
     assert expected_game == Server.game(pid)
   end
 
-  test "answer" do
-    {:ok, pid} =
-      Server.start_link(params: %{topic: "Maths", difficulty: :easy, nb_questions: 2})
-
-    {:ok, _game} = Server.join(pid, "player_id", self())
-    {:ok, _game} = Server.start(pid)
-    {:ok, game} = Server.answer(pid, "player_id", "answer")
-
-    assert [%GamePlayer{id: "player_id", answers: ["answer"], status: :playing}] == game.players
-  end
-
-  test "answer when player is not in the game" do
-    {:ok, pid} =
-      Server.start_link(params: %{topic: "Maths", difficulty: :easy, nb_questions: 2})
-
-    {:ok, _game} = Server.join(pid, "player_id", self())
-    {:ok, _game} = Server.start(pid)
-
-    assert {:error, :player_is_not_in_the_game} == Server.answer(pid, "player_id_2", "answer")
-  end
-
   test "answer when game is not in play" do
     {:ok, pid} =
       Server.start_link(params: %{topic: "Maths", difficulty: :easy, nb_questions: 2})
 
-    assert {:error, :game_is_not_in_play} == Server.answer(pid, "player_id", "answer")
+    assert {:error, :wrong_status} == Server.answer(pid, "player_id", 1)
   end
 end
