@@ -99,10 +99,6 @@ defmodule AiQuizz.Games.Game do
   Next Status
   """
   @spec next_status(Game.t()) :: Game.t()
-  def next_status(%Game{timer: 0, status: :lobby} = game) do
-    %Game{game | timer: game.time_per_question, status: :in_play}
-  end
-
   def next_status(%Game{timer: 0, status: :in_play_question} = game) do
     %Game{game | timer: game.time_to_answer, status: :in_play_response}
   end
@@ -136,7 +132,7 @@ defmodule AiQuizz.Games.Game do
         %GamePlayer{player | answers: Enum.to_list(1..length(game.questions))}
       end)
 
-    {:ok, %Game{game | players: new_players, status: :in_play}}
+    {:ok, %Game{game | players: new_players, status: :in_play_question}}
   end
 
   def start(%Game{players: [game_owner | _tail]}, player_id)

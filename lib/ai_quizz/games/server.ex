@@ -85,7 +85,7 @@ defmodule AiQuizz.Games.Server do
   def handle_call({:start, player_id}, _from, game) do
     case Game.start(game, player_id) do
       {:ok, game} ->
-        broadcast(game.code, :start, game)
+        broadcast(game.code, :game_update, game)
         :timer.send_after(1_000, self(), :tick)
         {:reply, {:ok, game}, game}
 

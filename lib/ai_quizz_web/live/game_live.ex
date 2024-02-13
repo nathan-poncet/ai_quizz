@@ -36,6 +36,7 @@ defmodule AiQuizzWeb.GameLive do
         socket =
           case Games.join_game(game_code, user_id, socket_id, user_email) do
             {:ok, player} ->
+              Games.subscribe(game_code, player.id)
               socket |> assign(:player, player)
 
             {:error, reason} ->
@@ -51,9 +52,20 @@ defmodule AiQuizzWeb.GameLive do
         socket
       end
 
-    {:ok, game} = Games.get_game(game_code)
+    socket =
+      case Games.get_game(game_code) do
+        {:ok, game} ->
+          socket |> assign(code: game_code, game: game)
 
-    {:ok, socket |> assign(code: game_code, game: game)}
+        {:error, reason} ->
+          Logger.error("Failed to get game: #{inspect(reason)}")
+
+          socket
+          |> put_flash(:error, "Failed to get game: #{inspect(reason)}")
+          |> redirect(to: ~p"/")
+      end
+
+    {:ok, socket}
   end
 
   def handle_event("start", _params, socket) do
@@ -81,7 +93,7 @@ defmodule AiQuizzWeb.GameLive do
   end
 
   def handle_info({:game_update, game}, socket) do
-    {:noreply, assign(socket, :game, game)}
+    {:noreply, socket |> assign(:game, game) |> put_flash(:info, "Game updated")}
   end
 
   def handle_info(event, socket) do
