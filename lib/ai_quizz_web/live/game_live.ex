@@ -24,6 +24,8 @@ defmodule AiQuizzWeb.GameLive do
   def mount(%{"id" => game_code}, _session, socket) do
     socket = stream(socket, :presences, [])
 
+    # TODO: join
+
     socket =
       if connected?(socket) do
         email = socket.assigns.current_user.email

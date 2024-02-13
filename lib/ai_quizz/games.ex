@@ -5,25 +5,40 @@ defmodule AiQuizz.Games do
   alias AiQuizz.Games.{Game, Server, ServerSupervisor}
 
   @doc """
-  Gets a single game.
+  Answer to question in a game.
 
   ## Examples
 
-      iex> get_game(123)
+      iex> answer(game_id, player_id, pid)
       {:ok, %Game{}}
 
-      iex> get_game(456)
+      iex> answer(bad_value, bad_value, bad_value)
       {:error, reason}
 
   """
-  def get_game(game_id) do
+  @spec answer(String.t(), String.t(), Integer.t()) :: {:ok, Game.t()} | {:error, any()}
+  def answer(game_id, player_id, answer) do
     case server(game_id) do
       {:ok, game_server} ->
-        {:ok, Server.game(game_server)}
+        Server.answer(game_server, player_id, answer)
 
       {:error, reason} ->
         {:error, reason}
     end
+  end
+
+  @doc """
+  Returns an `%Ecto.Changeset{}` for tracking game changes.
+
+  ## Examples
+
+      iex> change_game(game)
+      %Ecto.Changeset{data: %Game{}}
+
+  """
+  @spec change_game_registration(Game.t(), map) :: Ecto.Changeset.t()
+  def change_game_registration(%Game{} = game, attrs \\ %{}) do
+    Game.registration_changeset(game, attrs)
   end
 
   @doc """
@@ -80,21 +95,21 @@ defmodule AiQuizz.Games do
   end
 
   @doc """
-  Start a game.
+  Gets a single game.
 
   ## Examples
 
-      iex> start_game(game_id)
+      iex> get_game(123)
       {:ok, %Game{}}
 
-      iex> start_game(bad_value)
+      iex> get_game(456)
       {:error, reason}
 
   """
-  def start_game(game_id) do
+  def get_game(game_id) do
     case server(game_id) do
       {:ok, game_server} ->
-        Server.start(game_server)
+        {:ok, Server.game(game_server)}
 
       {:error, reason} ->
         {:error, reason}
@@ -126,48 +141,33 @@ defmodule AiQuizz.Games do
   end
 
   @doc """
-  Answer to question in a game.
-
-  ## Examples
-
-      iex> answer(game_id, player_id, pid)
-      {:ok, %Game{}}
-
-      iex> answer(bad_value, bad_value, bad_value)
-      {:error, reason}
-
-  """
-  @spec answer(String.t(), String.t(), Integer.t()) :: {:ok, Game.t()} | {:error, any()}
-  def answer(game_id, player_id, answer) do
-    case server(game_id) do
-      {:ok, game_server} ->
-        Server.answer(game_server, player_id, answer)
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  @doc """
-  Returns an `%Ecto.Changeset{}` for tracking game changes.
-
-  ## Examples
-
-      iex> change_game(game)
-      %Ecto.Changeset{data: %Game{}}
-
-  """
-  @spec change_game_registration(Game.t(), map) :: Ecto.Changeset.t()
-  def change_game_registration(%Game{} = game, attrs \\ %{}) do
-    Game.registration_changeset(game, attrs)
-  end
-
-  @doc """
   Get the list of players currently present in the specified game.
   """
   @spec list_presence(String.t()) :: Presence.t()
   def list_presence(join_code) do
     Presence.list("game:" <> join_code)
+  end
+
+  @doc """
+  Start a game.
+
+  ## Examples
+
+      iex> start_game(game_id)
+      {:ok, %Game{}}
+
+      iex> start_game(bad_value)
+      {:error, reason}
+
+  """
+  def start_game(game_id) do
+    case server(game_id) do
+      {:ok, game_server} ->
+        Server.start(game_server)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   @doc """

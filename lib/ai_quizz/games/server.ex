@@ -1,6 +1,7 @@
 defmodule AiQuizz.Games.Server do
   use GenServer, restart: :temporary
   require Logger
+  alias AiQuizz.Games.GamePlayer
   alias AiQuizz.Games.Game
 
   def start_link(args) do
@@ -23,20 +24,20 @@ defmodule AiQuizz.Games.Server do
 
   # Client
 
-  @spec start(GenServer.server()) :: {:ok, Game.t()} | {:error, atom()}
-  def start(game_server),
-    do: GenServer.call(game_server, :start)
-
-  @spec join(GenServer.server(), String.t(), pid()) :: {:ok, Game.t()} | {:error, atom()}
-  def join(game_server, player_id, channel_pid),
-    do: GenServer.call(game_server, {:join, player_id, channel_pid})
+  @spec answer(GenServer.server(), String.t(), Integer.t()) :: {:ok, Game.t()} | {:error, atom()}
+  def answer(game_server, player_id, answer),
+    do: GenServer.call(game_server, {:answer, player_id, answer})
 
   @spec game(GenServer.server()) :: Game.t()
   def game(game_server), do: GenServer.call(game_server, :game)
 
-  @spec answer(GenServer.server(), String.t(), Integer.t()) :: {:ok, Game.t()} | {:error, atom()}
-  def answer(game_server, player_id, answer),
-    do: GenServer.call(game_server, {:answer, player_id, answer})
+  @spec join(GenServer.server()) :: {:ok, GamePlayer.t()} | {:error, atom()}
+  def join(game_server),
+    do: GenServer.call(game_server, :join)
+
+  @spec start(GenServer.server()) :: {:ok, Game.t()} | {:error, atom()}
+  def start(game_server),
+    do: GenServer.call(game_server, :start)
 
   # Server
 
@@ -55,13 +56,12 @@ defmodule AiQuizz.Games.Server do
     end
   end
 
-  def handle_call({:join, player_id, channel_pid}, _from, game) do
-    case Game.add_player(game, player_id) do
-      {:ok, game} ->
-        Process.flag(:trap_exit, true)
-        Process.monitor(channel_pid)
+  def handle_call(:join, _from, game) do
+    player = GamePlayer.new()
 
-        {:reply, {:ok, game}, game}
+    case Game.add_player(game, player.id) do
+      {:ok, game} ->
+        {:reply, {:ok, player}, game}
 
       {:error, reason} ->
         {:reply, {:error, reason}, game}
