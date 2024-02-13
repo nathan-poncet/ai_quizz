@@ -162,10 +162,10 @@ defmodule AiQuizz.Games do
       {:error, reason}
 
   """
-  def start_game(game_id) do
-    case server(game_id) do
+  def start_game(game_code, player_id) do
+    case server(game_code) do
       {:ok, game_server} ->
-        Server.start(game_server)
+        Server.start(game_server, player_id)
 
       {:error, reason} ->
         {:error, reason}

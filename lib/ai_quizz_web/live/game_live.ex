@@ -9,7 +9,7 @@ defmodule AiQuizzWeb.GameLive do
 
   def render(assigns) do
     ~H"""
-    <h1>Hi from game <%= @code %></h1>
+    <h1>Hi from game <%= @code %> with status: <%= @game.status %></h1>
     <h2>Users</h2>
     <pre><%= inspect(@socket.id) %></pre>
     <ul id="users" phx-update="stream">
@@ -17,6 +17,8 @@ defmodule AiQuizzWeb.GameLive do
         <%= id %> (<%= length(metas) %>)
       </li>
     </ul>
+
+    <button phx-click="start">Start</button>
     """
   end
 
@@ -54,6 +56,18 @@ defmodule AiQuizzWeb.GameLive do
     {:ok, socket |> assign(code: game_code, game: game)}
   end
 
+  def handle_event("start", _params, socket) do
+    case Games.start_game(socket.assigns.code, socket.assigns.player.id) do
+      {:ok, _game} ->
+        {:noreply, socket}
+
+      {:error, reason} ->
+        Logger.error("Failed to start game: #{inspect(reason)}")
+
+        {:noreply, socket |> put_flash(:error, "Failed to start game: #{inspect(reason)}")}
+    end
+  end
+
   def handle_info({AiQuizzWeb.Presence, {:join, presence}}, socket) do
     {:noreply, stream_insert(socket, :presences, presence)}
   end
@@ -64,6 +78,10 @@ defmodule AiQuizzWeb.GameLive do
     else
       {:noreply, stream_insert(socket, :presences, presence)}
     end
+  end
+
+  def handle_info({:game_update, game}, socket) do
+    {:noreply, assign(socket, :game, game)}
   end
 
   def handle_info(event, socket) do

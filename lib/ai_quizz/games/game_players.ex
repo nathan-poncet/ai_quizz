@@ -18,7 +18,8 @@ defmodule AiQuizz.Games.GamePlayers do
   @doc """
   Add a player to the game.
   """
-  @spec add_player([GamePlayer.t()], GamePlayer.t()) :: {:ok, [GamePlayer.t()]} | {:error, atom()}
+  @spec add_player([GamePlayer.t()], GamePlayer.t()) ::
+          {:ok, [GamePlayer.t()], GamePlayer.t()} | {:error, atom()}
   def add_player(players, %GamePlayer{socket_id: socket_id, username: username} = player)
       when socket_id != "" and username != "" do
     case {
@@ -28,10 +29,11 @@ defmodule AiQuizz.Games.GamePlayers do
     } do
       {false, false, false} ->
         players = players ++ [player]
-        {:ok, players}
+        {:ok, players, player}
 
       {false, true, true} ->
-        {:ok, players}
+        player = Enum.find(players, &(&1.user_id == player.user_id && &1.username == username))
+        {:ok, players, player}
 
       {true, _, _} ->
         {:error, :socket_is_already_in_the_game}

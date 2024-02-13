@@ -128,8 +128,9 @@ defmodule AiQuizz.Games.Game do
   @doc """
   Start the game.
   """
-  @spec start(Game.t()) :: {:ok, Game.t()} | {:error, atom()}
-  def start(%Game{status: :lobby} = game) do
+  @spec start(Game.t(), String.t()) :: {:ok, Game.t()} | {:error, atom()}
+  def start(%Game{players: [game_owner | _tail], status: :lobby} = game, player_id)
+      when game_owner.id == player_id do
     new_players =
       Enum.map(game.players, fn player ->
         %GamePlayer{player | answers: Enum.to_list(1..length(game.questions))}
@@ -138,8 +139,12 @@ defmodule AiQuizz.Games.Game do
     {:ok, %Game{game | players: new_players, status: :in_play}}
   end
 
-  def start(%Game{}),
-    do: {:error, :game_has_already_started}
+  def start(%Game{players: [game_owner | _tail]}, player_id)
+      when game_owner.id != player_id,
+      do: {:error, :only_game_owner_is_allow_to_start_game}
+
+  def start(%Game{status: status}, _player_id) when status != :lobby,
+    do: {:error, :game_is_not_in_lobby}
 
   @doc """
   Update the registration game.
