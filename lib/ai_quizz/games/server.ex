@@ -59,11 +59,11 @@ defmodule AiQuizz.Games.Server do
   end
 
   def handle_call({:join, user_id, socket_id, name}, _from, game) do
-    player = GamePlayer.new(user_id, socket_id, name)
+    new_player = GamePlayer.new(user_id, socket_id, name)
 
-    case GamePlayers.add_player(game.players, player) do
+    case GamePlayers.add_player(game.players, new_player) do
       {:ok, players} ->
-        {:reply, {:ok, player}, %Game{game | players: players}}
+        {:reply, {:ok, new_player}, %Game{game | players: players}}
 
       {:error, reason} ->
         {:reply, {:error, reason}, game}

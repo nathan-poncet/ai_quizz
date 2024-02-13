@@ -15,10 +15,7 @@ defmodule AiQuizz.Games.ServerSupervisor do
   def start_child(params) do
     Logger.debug("Starting game dynamic server supervisor for game")
 
-    DynamicSupervisor.start_child(
-      __MODULE__,
-      {Server, params: params}
-    )
+    DynamicSupervisor.start_child(__MODULE__, {Server, params: params})
   end
 
   def terminate_child(game_server_pid) do
