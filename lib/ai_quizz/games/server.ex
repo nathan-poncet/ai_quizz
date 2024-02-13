@@ -1,6 +1,7 @@
 defmodule AiQuizz.Games.Server do
   use GenServer, restart: :temporary
   require Logger
+  alias AiQuizz.Games.GamePlayers
   alias AiQuizz.Games.GamePlayer
   alias AiQuizz.Games.Game
 
@@ -31,9 +32,10 @@ defmodule AiQuizz.Games.Server do
   @spec game(GenServer.server()) :: Game.t()
   def game(game_server), do: GenServer.call(game_server, :game)
 
-  @spec join(GenServer.server()) :: {:ok, GamePlayer.t()} | {:error, atom()}
-  def join(game_server),
-    do: GenServer.call(game_server, :join)
+  @spec join(GenServer.server(), String.t(), String.t(), String.t()) ::
+          {:ok, GamePlayer.t()} | {:error, atom()}
+  def join(game_server, user_id, socket_id, name),
+    do: GenServer.call(game_server, {:join, user_id, socket_id, name})
 
   @spec start(GenServer.server()) :: {:ok, Game.t()} | {:error, atom()}
   def start(game_server),
@@ -56,12 +58,12 @@ defmodule AiQuizz.Games.Server do
     end
   end
 
-  def handle_call(:join, _from, game) do
-    player = GamePlayer.new()
+  def handle_call({:join, user_id, socket_id, name}, _from, game) do
+    player = GamePlayer.new(user_id, socket_id, name)
 
-    case Game.add_player(game, player.id) do
-      {:ok, game} ->
-        {:reply, {:ok, player}, game}
+    case GamePlayers.add_player(game.players, player) do
+      {:ok, players} ->
+        {:reply, {:ok, player}, %Game{game | players: players}}
 
       {:error, reason} ->
         {:reply, {:error, reason}, game}

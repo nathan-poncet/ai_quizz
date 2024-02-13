@@ -34,7 +34,7 @@ defmodule AiQuizzWeb.GameLive do
         stream(
           socket,
           :presences,
-          Games.list_presence(game_code) |> Enum.map(fn {_id, presence} -> presence end)
+          Games.list_presence(game_code)
         )
       else
         socket

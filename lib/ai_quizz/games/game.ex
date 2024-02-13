@@ -28,20 +28,6 @@ defmodule AiQuizz.Games.Game do
   end
 
   @doc """
-  Add a player to the game.
-  """
-  @spec add_player(Game.t(), String.t()) :: {:ok, Game.t()} | {:error, atom()}
-  def add_player(%Game{status: :lobby} = game, player_id),
-    do:
-      {:ok, %Game{game | players: game.players ++ [%GamePlayer{id: player_id, status: :playing}]}}
-
-  def add_player(%Game{status: :finished}, _player_id),
-    do: {:error, :game_finished}
-
-  def add_player(%Game{} = game, player_id),
-    do: {:ok, %Game{game | players: game.players ++ [%GamePlayer{id: player_id}]}}
-
-  @doc """
   Add an answer for a player to the game.
   """
   @spec answer(Game.t(), String.t(), Integer.t()) :: {:ok, Game.t()} | {:error, atom()}

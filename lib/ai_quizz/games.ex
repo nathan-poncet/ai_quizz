@@ -128,10 +128,11 @@ defmodule AiQuizz.Games do
       {:error, reason}
 
   """
-  @spec join_game(String.t(), String.t(), Process.t()) :: {:ok, Game.t()} | {:error, any()}
-  def join_game(game_id, player_id, pid) do
+  @spec join_game(String.t(), String.t(), String.t(), String.t()) ::
+          {:ok, Game.t()} | {:error, any()}
+  def join_game(game_id, user_id, socket_id, name) do
     with {:ok, game_server} <- server(game_id),
-         {:ok, _} = join <- Server.join(game_server, player_id, pid) do
+         {:ok, _player} = join <- Server.join(game_server, user_id, socket_id, name) do
       Process.monitor(game_server)
       join
     else
@@ -145,7 +146,7 @@ defmodule AiQuizz.Games do
   """
   @spec list_presence(String.t()) :: Presence.t()
   def list_presence(join_code) do
-    Presence.list("game:" <> join_code)
+    Presence.list("game:" <> join_code) |> Enum.map(fn {_id, presence} -> presence end)
   end
 
   @doc """

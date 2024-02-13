@@ -8,6 +8,8 @@ defmodule AiQuizz.Games.GamePlayer do
   @type t :: %__MODULE__{}
 
   embedded_schema do
+    field :socket_id, :string, default: ""
+    field :user_id, :string, default: ""
     field :username, :string, default: ""
     field :answers, {:array, :string}, default: []
     field :status, Ecto.Enum, values: [:waiting, :playing], default: :waiting
@@ -20,9 +22,9 @@ defmodule AiQuizz.Games.GamePlayer do
   def add_answer(%GamePlayer{}, _answer),
     do: {:error, :player_is_not_playing}
 
-  @spec new() :: GamePlayer.t()
-  def new do
-    %GamePlayer{id: uuid()}
+  @spec new(String.t(), String.t(), String.t()) :: GamePlayer.t()
+  def new(user_id, socket_id, username) do
+    %GamePlayer{id: uuid(), user_id: user_id, socket_id: socket_id, username: username}
   end
 
   @spec registration_changeset(GamePlayer.t(), map) :: Ecto.Changeset.t()
@@ -32,7 +34,6 @@ defmodule AiQuizz.Games.GamePlayer do
     |> validate_required([:username])
   end
 
-  @spec uuid() :: String.t()
   defp uuid do
     @id_length
     |> :crypto.strong_rand_bytes()
