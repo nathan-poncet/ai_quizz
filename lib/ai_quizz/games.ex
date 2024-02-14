@@ -129,11 +129,10 @@ defmodule AiQuizz.Games do
       {:error, reason}
 
   """
-  @spec join_game(String.t(), String.t(), String.t(), String.t()) ::
-          {:ok, GamePlayer.t()} | {:error, any()}
-  def join_game(game_id, user_id, socket_id, name) do
+  @spec join_game(String.t(), GamePlayer.t()) :: {:ok, GamePlayer.t()} | {:error, any()}
+  def join_game(game_id, %GamePlayer{} = player_params) do
     with {:ok, game_server} <- server(game_id),
-         {:ok, _player} = join <- Server.join(game_server, user_id, socket_id, name) do
+         {:ok, _player} = join <- Server.join(game_server, player_params) do
       Process.monitor(game_server)
       join
     else

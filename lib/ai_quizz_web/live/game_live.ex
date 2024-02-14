@@ -1,10 +1,13 @@
 defmodule AiQuizzWeb.GameLive do
+  alias AiQuizz.Accounts
+  alias AiQuizz.Accounts.User
   alias AiQuizz.Games.GamePlayer
   use AiQuizzWeb, :live_view
 
   require Logger
 
   alias AiQuizz.Games
+  alias AiQuizzWeb.GameComponents
 
   #  alias AiQuizz.Games
 
@@ -25,6 +28,8 @@ defmodule AiQuizzWeb.GameLive do
 
     ~H"""
     <h1>Hi from game <%= @code %> with status: <%= @game.status %></h1>
+
+    <pre> <%= inspect(@game.players) %> </pre>
     <!-- Player Display -->
     <h2>Users</h2>
     <div class="grid grid-cols-5 gap-2 mx-4 mt-2 mb-8" id="users">
@@ -54,6 +59,9 @@ defmodule AiQuizzWeb.GameLive do
       </div>
     </div>
 
+    <%!-- Spacer --%>
+    <div class="h-8"></div>
+
     <%!-- Options --%>
     <div :if={@game.status in [:in_play_response, :in_result]} class="grid grid-cols-2 gap-2">
       <button
@@ -73,8 +81,11 @@ defmodule AiQuizzWeb.GameLive do
       </button>
     </div>
 
+    <%!-- Spacer --%>
+    <div class="h-8"></div>
+
     <%!-- Response --%>
-    <div :if={@game.status == :in_result}>
+    <div :if={@game.status in [:in_result]}>
       <h2>Responses</h2>
       <div :for={player <- @game.players} class="flex flex-row items-center justify-center">
         <div class="flex-1 text-lg decoration-2 truncate">
@@ -87,29 +98,36 @@ defmodule AiQuizzWeb.GameLive do
       </div>
     </div>
 
-    <.button phx-click="start">
-      Start
-    </.button>
+    <%!-- Spacer --%>
+    <div class="h-8"></div>
 
-    <.button phx-click="next_question">
-      Next Question
-    </.button>
+    <GameComponents.bottom_app_bar game={@game} />
     """
   end
 
-  on_mount {AiQuizzWeb.UserAuth, :ensure_authenticated}
-
-  def mount(%{"id" => game_code}, _session, socket) do
-    socket = assign(socket, player: %GamePlayer{}, presences: [])
+  def mount(%{"id" => game_code}, session, socket) do
+    socket =
+      socket
+      |> assign(player: %GamePlayer{}, presences: [])
+      |> assign_new(:current_user, fn -> find_current_user(session) end)
 
     socket =
       if connected?(socket) do
         socket_id = socket.id
-        user_id = socket.assigns.current_user.id
-        user_email = socket.assigns.current_user.email
+
+        player_params =
+          if socket.assigns.current_user != nil do
+            %GamePlayer{
+              socket_id: socket_id,
+              user_id: socket.assigns.current_user.id,
+              username: socket.assigns.current_user.email
+            }
+          else
+            %GamePlayer{socket_id: socket_id, username: "Random:#{socket_id}"}
+          end
 
         socket =
-          case Games.join_game(game_code, user_id, socket_id, user_email) do
+          case Games.join_game(game_code, player_params) do
             {:ok, player} ->
               Games.subscribe(game_code, player)
               assign(socket, :player, player)
@@ -133,8 +151,6 @@ defmodule AiQuizzWeb.GameLive do
           socket |> assign(code: game_code, game: game)
 
         {:error, reason} ->
-          Logger.error("Failed to get game: #{inspect(reason)}")
-
           socket
           |> put_flash(:error, "Failed to get game: #{inspect(reason)}")
           |> redirect(to: ~p"/")
@@ -233,4 +249,11 @@ defmodule AiQuizzWeb.GameLive do
   defp indicator_size(:small), do: "text-lg"
   defp indicator_size(:medium), do: "text-xl"
   defp indicator_size(:xlarge), do: "text-3xl"
+
+  @spec find_current_user(map) :: User.t()
+  defp find_current_user(session) do
+    with user_token when not is_nil(user_token) <- session["user_token"],
+         %User{} = user <- Accounts.get_user_by_session_token(user_token),
+         do: user
+  end
 end

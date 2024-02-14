@@ -18,7 +18,7 @@ defmodule AiQuizzWeb.Router do
   end
 
   scope "/", AiQuizzWeb do
-    pipe_through :browser
+    pipe_through [:browser, :fetch_current_user]
 
     live "/", HomeLive
     live "/join-game", JoinGameLive

@@ -1,7 +1,6 @@
 defmodule AiQuizz.Games.Server do
   use GenServer, restart: :temporary
   require Logger
-  alias AiQuizz.Games.GamePlayers
   alias AiQuizz.Games.GamePlayer
   alias AiQuizz.Games.Game
 
@@ -32,10 +31,9 @@ defmodule AiQuizz.Games.Server do
   @spec game(GenServer.server()) :: Game.t()
   def game(game_server), do: GenServer.call(game_server, :game)
 
-  @spec join(GenServer.server(), String.t(), String.t(), String.t()) ::
-          {:ok, GamePlayer.t()} | {:error, atom()}
-  def join(game_server, user_id, socket_id, name),
-    do: GenServer.call(game_server, {:join, user_id, socket_id, name})
+  @spec join(GenServer.server(), GamePlayer.t()) :: {:ok, GamePlayer.t()} | {:error, atom()}
+  def join(game_server, %GamePlayer{} = player_params),
+    do: GenServer.call(game_server, {:join, player_params})
 
   @spec next_question(GenServer.server(), String.t()) :: {:ok, Game.t()} | {:error, atom()}
   def next_question(game_server, player_id),
@@ -64,13 +62,11 @@ defmodule AiQuizz.Games.Server do
 
   def handle_call(:game, _from, game), do: {:reply, game, game}
 
-  def handle_call({:join, user_id, socket_id, name}, _from, game) do
-    new_player =
-      GamePlayer.new(%GamePlayer{user_id: user_id, socket_id: socket_id, username: name})
-
-    case GamePlayers.add_player(game.players, new_player) do
-      {:ok, new_players, new_player} ->
-        {:reply, {:ok, new_player}, %Game{game | players: new_players}}
+  def handle_call({:join, %GamePlayer{} = player_params}, _from, game) do
+    case Game.join(game, player_params) do
+      {:ok, game, player} ->
+        broadcast(game.code, :game_update, game)
+        {:reply, {:ok, player}, game}
 
       {:error, reason} ->
         {:reply, {:error, reason}, game}
