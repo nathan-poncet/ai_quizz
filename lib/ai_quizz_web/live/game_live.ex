@@ -41,60 +41,22 @@ defmodule AiQuizzWeb.GameLive do
     </div>
 
     <%!-- Timer --%>
-    <div class="flex flex-row items-center justify-center">
-      <div class="text-4xl font-bold">
-        <%= @game.timer %>
-      </div>
-    </div>
-
-    <%!-- Question --%>
-    <div
-      :if={@game.status in [:in_play_question, :in_play_response, :in_result]}
-      class="flex flex-row items-center justify-center"
-    >
-      <div class="text-4xl font-bold">
-        <%= @current_question.question %>
-      </div>
-    </div>
+    <GameComponents.timer timer={@game.timer} />
 
     <%!-- Spacer --%>
     <div class="h-8"></div>
 
-    <%!-- Options --%>
-    <div :if={@game.status in [:in_play_response, :in_result]} class="grid grid-cols-2 gap-2">
-      <button
-        :for={option <- @current_question.options}
-        phx-click="answer"
-        phx-value-answer={option}
-        class={[
-          "text-4xl font-bold p-4 border border-black	rounded",
-          @response == option && "bg-black text-white",
-          @game.status == :in_result && "cursor-default",
-          @game.status == :in_result && @current_question.answer == option && "bg-green-400",
-          @game.status == :in_result && @response == option && @current_question.answer != option &&
-            "bg-red-400"
-        ]}
-      >
-        <%= option %>
-      </button>
-    </div>
+    <%!-- Question --%>
+    <GameComponents.question game={@game} current_question={@current_question} response={@response} />
 
     <%!-- Spacer --%>
     <div class="h-8"></div>
 
     <%!-- Response --%>
-    <div :if={@game.status in [:in_result]}>
-      <h2>Responses</h2>
-      <div :for={player <- @game.players} class="flex flex-row items-center justify-center">
-        <div class="flex-1 text-lg decoration-2 truncate">
-          <%= if player.id == @player_id, do: "You", else: player.username %>
-        </div>
+    <GameComponents.response game={@game} player_id={@player_id} />
 
-        <div class="flex-1 text-lg decoration-2 truncate">
-          <%= player.answers |> Enum.at(@game.current_question) %>
-        </div>
-      </div>
-    </div>
+    <%!-- Score --%>
+    <GameComponents.score game={@game} />
 
     <%!-- Spacer --%>
     <div class="h-8"></div>
@@ -136,14 +98,26 @@ defmodule AiQuizzWeb.GameLive do
         %{"answer" => answer},
         %{assigns: %{code: code, player_id: player_id}} = socket
       ) do
-    Logger.warning("Answering question with: #{answer} for player: #{player_id}")
-
     case Games.answer(code, player_id, answer) do
       {:ok, _game} ->
         {:noreply, socket}
 
       {:error, reason} ->
         {:noreply, socket |> put_flash(:error, "Failed to answer question: #{inspect(reason)}")}
+    end
+  end
+
+  def handle_event(
+        "finish",
+        _params,
+        %{assigns: %{code: code, player_id: player_id}} = socket
+      ) do
+    case Games.finish_game(code, player_id) do
+      {:ok, _game} ->
+        {:noreply, socket}
+
+      {:error, reason} ->
+        {:noreply, socket |> put_flash(:error, "Failed to finish game: #{inspect(reason)}")}
     end
   end
 

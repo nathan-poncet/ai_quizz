@@ -1,4 +1,5 @@
 defmodule AiQuizz.Games.GamePlayer do
+  alias AiQuizz.Games.Game
   alias AiQuizz.Games.GamePlayer
   use Ecto.Schema
   import Ecto.Changeset
@@ -8,19 +9,36 @@ defmodule AiQuizz.Games.GamePlayer do
   @type t :: %__MODULE__{}
 
   embedded_schema do
+    field :score, :integer, default: 0
     field :socket_id, :string, default: ""
     field :user_id, :string, default: ""
     field :username, :string, default: ""
-    field :answers, {:array, :string}, default: []
+    embeds_many(:answers, Answer)
   end
 
-  @spec add_answer(GamePlayer.t(), Integer.t(), String.t()) :: GamePlayer.t()
+  defmodule Answer do
+    use Ecto.Schema
+
+    @type t :: %__MODULE__{}
+
+    embedded_schema do
+      field :value, :string, default: nil
+      field :time, :integer, default: 0
+      field :status, Ecto.Enum, values: [:pending, :correct, :wrong], default: :pending
+    end
+  end
+
+  @spec add_answer(GamePlayer.t(), Integer.t(), Answer.t()) :: GamePlayer.t()
   def add_answer(%GamePlayer{} = player, current_question, answer),
     do: %GamePlayer{player | answers: List.replace_at(player.answers, current_question, answer)}
 
-  @spec new(GamePlayer.t()) :: GamePlayer.t()
-  def new(%GamePlayer{} = player) do
-    %GamePlayer{player | id: uuid()}
+  @spec new(Game.t(), GamePlayer.t()) :: GamePlayer.t()
+  def new(%Game{} = game, %GamePlayer{} = player) do
+    %GamePlayer{
+      player
+      | id: uuid(),
+        answers: Enum.map(1..length(game.questions), fn _ -> nil end)
+    }
   end
 
   @spec registration_changeset(GamePlayer.t(), map) :: Ecto.Changeset.t()

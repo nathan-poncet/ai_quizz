@@ -28,6 +28,9 @@ defmodule AiQuizz.Games.Server do
   def answer(game_server, player_id, answer),
     do: GenServer.call(game_server, {:answer, player_id, answer})
 
+  @spec finish(GenServer.server(), String.t()) :: {:ok, Game.t()} | {:error, atom()}
+  def finish(game_server, player_id), do: GenServer.call(game_server, {:finish, player_id})
+
   @spec game(GenServer.server()) :: Game.t()
   def game(game_server), do: GenServer.call(game_server, :game)
 
@@ -51,6 +54,17 @@ defmodule AiQuizz.Games.Server do
 
   def handle_call({:answer, player_id, answer}, _from, game) do
     case Game.answer(game, player_id, answer) do
+      {:ok, game} ->
+        broadcast(game.code, :game_update, game)
+        {:reply, {:ok, game}, game}
+
+      {:error, reason} ->
+        {:reply, {:error, reason}, game}
+    end
+  end
+
+  def handle_call({:finish, player_id}, _from, game) do
+    case Game.finish(game, player_id) do
       {:ok, game} ->
         broadcast(game.code, :game_update, game)
         {:reply, {:ok, game}, game}

@@ -2,6 +2,7 @@ defmodule AiQuizz.Games.Game do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias AiQuizz.Games.GamePlayer.Answer
   alias AiQuizz.Games.GamePlayers
   alias AiQuizz.Games.{Game, GamePlayer, GameQuestion, GameQuestions}
 
@@ -16,10 +17,11 @@ defmodule AiQuizz.Games.Game do
     field :nb_questions, :integer
 
     field :status, Ecto.Enum,
-      values: [:lobby, :in_play_question, :in_play_response, :in_result],
+      values: [:lobby, :in_play_question, :in_play_response, :in_result, :finished],
       default: :lobby
 
     field :timer, :integer, default: 0
+    field :timer_start, :integer, default: 0
     field :time_per_question, :integer, default: 5
     field :time_to_answer, :integer, default: 5
     field :topic, :string
@@ -38,7 +40,7 @@ defmodule AiQuizz.Games.Game do
         {:error, :player_is_not_in_the_game}
 
       _player ->
-        {:ok, update_answer(game, player_id, answer)}
+        {:ok, add_answer(game, player_id, answer)}
     end
   end
 
@@ -51,21 +53,35 @@ defmodule AiQuizz.Games.Game do
   @doc """
   Finish the game.
   """
-  @spec finish(Game.t()) :: {:ok, Game.t()} | {:error, atom()}
-  def finish(%Game{status: :in_play} = game), do: {:ok, %Game{game | status: :finished}}
+  @spec finish(Game.t(), String.t()) :: {:ok, Game.t()} | {:error, atom()}
+  def finish(
+        %Game{
+          current_question: current_question,
+          players: [game_owner | _tail],
+          questions: questions,
+          status: :in_result
+        } = game,
+        player_id
+      )
+      when game_owner.id == player_id and current_question >= length(questions) - 1,
+      do: {:ok, %Game{game | status: :finished}}
 
-  def finish(%Game{}),
-    do: {:error, :game_is_not_in_play}
+  def finish(%Game{players: [game_owner | _tail]}, player_id)
+      when game_owner.id != player_id,
+      do: {:error, :only_game_owner_is_allow_to_end_game}
+
+  def finish(%Game{}, _player_id),
+    do: {:error, :not_allowed_to_end_game}
 
   @doc """
   Join the game.
   """
   @spec join(Game.t(), GamePlayer.t()) :: {:ok, Game.t(), String.t()} | {:error, atom()}
   def join(%Game{players: players} = game, %GamePlayer{} = player_params) do
-    case GamePlayers.add_player(players, GamePlayer.new(player_params)) do
+    player = GamePlayer.new(game, player_params)
+
+    case GamePlayers.add_player(players, player) do
       {:ok, new_players, new_player} ->
-        # TODO
-        %GamePlayer{new_player | answers: Enum.to_list(1..length(game.questions))}
         {:ok, %Game{game | players: new_players}, new_player.id}
 
       {:error, reason} ->
@@ -149,13 +165,7 @@ defmodule AiQuizz.Games.Game do
   @spec start(Game.t(), String.t()) :: {:ok, Game.t()} | {:error, atom()}
   def start(%Game{players: [game_owner | _tail], status: :lobby} = game, player_id)
       when game_owner.id == player_id do
-    new_players =
-      Enum.map(game.players, fn player ->
-        %GamePlayer{player | answers: Enum.to_list(1..length(game.questions))}
-      end)
-
-    {:ok,
-     %Game{game | players: new_players, status: :in_play_question, timer: game.time_per_question}}
+    {:ok, %Game{game | status: :in_play_question, timer: game.time_per_question}}
   end
 
   def start(%Game{players: [game_owner | _tail]}, player_id)
@@ -203,13 +213,22 @@ defmodule AiQuizz.Games.Game do
 
   # Private functions
 
-  @spec update_answer(Game.t(), String.t(), String.t()) :: Game.t()
-  defp update_answer(%Game{players: players} = game, player_id, answer) do
+  @spec add_answer(Game.t(), String.t(), String.t()) :: Game.t()
+  defp add_answer(%Game{players: players} = game, player_id, answer) do
+    now = :os.system_time(:millisecond)
+    time = now - game.timer_start
+    is_correct = answer == Enum.at(game.questions, game.current_question).answer
+    status = if is_correct, do: :correct, else: :wrong
+
+    game_player_answer = %Answer{time: time, status: status, value: answer}
+
     new_players =
-      GamePlayers.add_answer(players, player_id, game.current_question, answer)
+      GamePlayers.add_answer(players, player_id, game.current_question, game_player_answer)
 
     %Game{game | players: new_players}
   end
+
+  # Private function to calculate the score for a player
 
   @spec uuid() :: String.t()
   defp uuid() do

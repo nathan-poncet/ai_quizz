@@ -1,11 +1,12 @@
 defmodule AiQuizz.Games.GamePlayers do
   require Logger
+  alias AiQuizz.Games.GamePlayer.Answer
   alias AiQuizz.Games.GamePlayer
 
   @doc """
   update the answer of a player.
   """
-  @spec add_answer([GamePlayer.t()], String.t(), Integer.t(), String.t()) :: [GamePlayer.t()]
+  @spec add_answer([GamePlayer.t()], String.t(), Integer.t(), Answer.t()) :: [GamePlayer.t()]
   def add_answer(players, player_id, current_question, answer) do
     Enum.map(players, fn player ->
       if player.id == player_id do

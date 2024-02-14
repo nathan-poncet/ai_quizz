@@ -96,6 +96,20 @@ defmodule AiQuizz.Games do
   end
 
   @doc """
+  Finish a game.
+  """
+  @spec finish_game(String.t(), String.t()) :: {:ok, Game.t()} | {:error, any()}
+  def finish_game(game_id, player_id) do
+    case server(game_id) do
+      {:ok, game_server} ->
+        Server.finish(game_server, player_id)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @doc """
   Gets a single game.
 
   ## Examples
