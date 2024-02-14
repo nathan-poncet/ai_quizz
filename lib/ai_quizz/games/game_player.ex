@@ -34,11 +34,8 @@ defmodule AiQuizz.Games.GamePlayer do
 
   @spec new(Game.t(), GamePlayer.t()) :: GamePlayer.t()
   def new(%Game{} = game, %GamePlayer{} = player) do
-    %GamePlayer{
-      player
-      | id: uuid(),
-        answers: Enum.map(1..length(game.questions), fn _ -> nil end)
-    }
+    answers = Enum.map(1..length(game.questions), fn _ -> nil end)
+    %GamePlayer{player | id: uuid(), answers: answers}
   end
 
   @spec registration_changeset(GamePlayer.t(), map) :: Ecto.Changeset.t()

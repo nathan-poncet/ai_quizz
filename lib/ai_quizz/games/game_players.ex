@@ -53,6 +53,20 @@ defmodule AiQuizz.Games.GamePlayers do
   def add_player(_players, %GamePlayer{username: ""}),
     do: {:error, :username_not_provided}
 
+  @doc """
+  Update the score of a player.
+  """
+  @spec update_score([GamePlayer.t()], String.t(), Integer.t()) :: [GamePlayer.t()]
+  def update_score(players, player_id, score) do
+    Enum.map(players, fn player ->
+      if player.id == player_id do
+        %GamePlayer{player | score: player.score + score}
+      else
+        player
+      end
+    end)
+  end
+
   # Private functions
 
   @spec socket_exists?([GamePlayer.t()], GamePlayer.t()) :: boolean()
