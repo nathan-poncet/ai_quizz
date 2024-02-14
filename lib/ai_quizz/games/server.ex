@@ -25,7 +25,7 @@ defmodule AiQuizz.Games.Server do
 
   # Client
 
-  @spec answer(GenServer.server(), String.t(), Integer.t()) :: {:ok, Game.t()} | {:error, atom()}
+  @spec answer(GenServer.server(), String.t(), String.t()) :: {:ok, Game.t()} | {:error, atom()}
   def answer(game_server, player_id, answer),
     do: GenServer.call(game_server, {:answer, player_id, answer})
 
@@ -36,6 +36,10 @@ defmodule AiQuizz.Games.Server do
           {:ok, GamePlayer.t()} | {:error, atom()}
   def join(game_server, user_id, socket_id, name),
     do: GenServer.call(game_server, {:join, user_id, socket_id, name})
+
+  @spec next_question(GenServer.server(), String.t()) :: {:ok, Game.t()} | {:error, atom()}
+  def next_question(game_server, player_id),
+    do: GenServer.call(game_server, {:next_question, player_id})
 
   @spec start(GenServer.server(), String.t()) :: {:ok, Game.t()} | {:error, atom()}
   def start(game_server, player_id),
@@ -50,6 +54,7 @@ defmodule AiQuizz.Games.Server do
   def handle_call({:answer, player_id, answer}, _from, game) do
     case Game.answer(game, player_id, answer) do
       {:ok, game} ->
+        broadcast(game.code, :game_update, game)
         {:reply, {:ok, game}, game}
 
       {:error, reason} ->
@@ -75,6 +80,8 @@ defmodule AiQuizz.Games.Server do
   def handle_call({:next_question, player_id}, _from, game) do
     case Game.next_question(game, player_id) do
       {:ok, game} ->
+        broadcast(game.code, :game_update, game)
+        :timer.send_after(1_000, self(), :tick)
         {:reply, {:ok, game}, game}
 
       {:error, reason} ->
@@ -96,8 +103,9 @@ defmodule AiQuizz.Games.Server do
 
   # Timer
   def handle_info(:tick, %Game{} = game) do
-    broadcast(game.code, :tick, game)
-    {:noreply, on_tick(game)}
+    new_game = on_tick(game)
+    broadcast(new_game.code, :tick, new_game)
+    {:noreply, new_game}
   end
 
   def handle_info(:reveal_responses, game) do
@@ -131,7 +139,13 @@ defmodule AiQuizz.Games.Server do
     %Game{game | timer: game.timer - 1}
   end
 
-  defp on_tick(%Game{timer: 0} = game) do
+  defp on_tick(%Game{status: status, timer: 0} = game)
+       when status in [:in_play_question, :in_play_response] do
+    :timer.send_after(1_000, self(), :tick)
     Game.next_status(game)
+  end
+
+  defp on_tick(%Game{status: :in_result} = game) do
+    game
   end
 end

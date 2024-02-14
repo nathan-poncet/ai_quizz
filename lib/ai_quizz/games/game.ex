@@ -20,8 +20,8 @@ defmodule AiQuizz.Games.Game do
       default: :lobby
 
     field :timer, :integer, default: 0
-    field :time_per_question, :integer, default: 10_000
-    field :time_to_answer, :integer, default: 30_000
+    field :time_per_question, :integer, default: 5
+    field :time_to_answer, :integer, default: 5
     field :topic, :string
 
     embeds_many :players, GamePlayer
@@ -31,7 +31,7 @@ defmodule AiQuizz.Games.Game do
   @doc """
   Add an answer for a player to the game.
   """
-  @spec answer(Game.t(), String.t(), Integer.t()) :: {:ok, Game.t()} | {:error, atom()}
+  @spec answer(Game.t(), String.t(), String.t()) :: {:ok, Game.t()} | {:error, atom()}
   def answer(%Game{players: players, status: :in_play_response} = game, player_id, answer) do
     case Enum.find(players, fn player -> player.id == player_id end) do
       nil ->
@@ -70,9 +70,15 @@ defmodule AiQuizz.Games.Game do
         } = game,
         player_id
       )
-      when current_question < length(questions) and
+      when current_question < length(questions) - 1 and
              owner_player.id == player_id do
-    {:ok, %Game{game | current_question: current_question + 1}}
+    {:ok,
+     %Game{
+       game
+       | current_question: current_question + 1,
+         status: :in_play_question,
+         timer: game.time_per_question
+     }}
   end
 
   def next_question(
@@ -90,7 +96,7 @@ defmodule AiQuizz.Games.Game do
         },
         _player_id
       )
-      when current_question >= length(questions),
+      when current_question >= length(questions) - 1,
       do: {:error, :no_more_questions}
 
   def next_question(%Game{} = _game, _player_id), do: {:error, :game_is_not_in_play}
@@ -132,7 +138,8 @@ defmodule AiQuizz.Games.Game do
         %GamePlayer{player | answers: Enum.to_list(1..length(game.questions))}
       end)
 
-    {:ok, %Game{game | players: new_players, status: :in_play_question}}
+    {:ok,
+     %Game{game | players: new_players, status: :in_play_question, timer: game.time_per_question}}
   end
 
   def start(%Game{players: [game_owner | _tail]}, player_id)
@@ -180,7 +187,7 @@ defmodule AiQuizz.Games.Game do
 
   # Private functions
 
-  @spec update_answer(Game.t(), String.t(), Integer.t()) :: Game.t()
+  @spec update_answer(Game.t(), String.t(), String.t()) :: Game.t()
   defp update_answer(%Game{players: players} = game, player_id, answer) do
     new_players =
       GamePlayers.add_answer(players, player_id, game.current_question, answer)

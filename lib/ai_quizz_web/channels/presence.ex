@@ -17,7 +17,7 @@ defmodule AiQuizzWeb.Presence do
     for {key, %{metas: [meta | metas]}} <- presences, into: %{} do
       # user can be populated here from the database here we populate
       # the name for demonstration purposes
-      {key, %{metas: [meta | metas], id: meta.id, user: %{name: meta.id}}}
+      {key, %{metas: [meta | metas], id: meta.id, user: meta.player}}
     end
   end
 

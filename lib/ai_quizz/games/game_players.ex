@@ -4,7 +4,7 @@ defmodule AiQuizz.Games.GamePlayers do
   @doc """
   update the answer of a player.
   """
-  @spec add_answer([GamePlayer.t()], String.t(), Integer.t(), Integer.t()) :: [GamePlayer.t()]
+  @spec add_answer([GamePlayer.t()], String.t(), Integer.t(), String.t()) :: [GamePlayer.t()]
   def add_answer(players, player_id, current_question, answer) do
     Enum.map(players, fn player ->
       if player.id == player_id do

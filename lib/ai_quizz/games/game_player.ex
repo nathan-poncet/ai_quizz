@@ -14,7 +14,7 @@ defmodule AiQuizz.Games.GamePlayer do
     field :answers, {:array, :string}, default: []
   end
 
-  @spec add_answer(GamePlayer.t(), Integer.t(), Integer.t()) :: GamePlayer.t()
+  @spec add_answer(GamePlayer.t(), Integer.t(), String.t()) :: GamePlayer.t()
   def add_answer(%GamePlayer{} = player, current_question, answer),
     do: %GamePlayer{player | answers: List.replace_at(player.answers, current_question, answer)}
 

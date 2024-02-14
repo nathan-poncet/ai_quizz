@@ -17,7 +17,7 @@ defmodule AiQuizz.Games do
       {:error, reason}
 
   """
-  @spec answer(String.t(), String.t(), Integer.t()) :: {:ok, Game.t()} | {:error, any()}
+  @spec answer(String.t(), String.t(), String.t()) :: {:ok, Game.t()} | {:error, any()}
   def answer(game_id, player_id, answer) do
     case server(game_id) do
       {:ok, game_server} ->
@@ -151,6 +151,20 @@ defmodule AiQuizz.Games do
   end
 
   @doc """
+  Next question in a game.
+  """
+  @spec next_question(String.t(), String.t()) :: {:ok, Game.t()} | {:error, any()}
+  def next_question(game_id, player_id) do
+    case server(game_id) do
+      {:ok, game_server} ->
+        Server.next_question(game_server, player_id)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @doc """
   Start a game.
 
   ## Examples
@@ -162,6 +176,7 @@ defmodule AiQuizz.Games do
       {:error, reason}
 
   """
+  @spec start_game(String.t(), String.t()) :: {:ok, Game.t()} | {:error, any()}
   def start_game(game_code, player_id) do
     case server(game_code) do
       {:ok, game_server} ->
@@ -175,12 +190,12 @@ defmodule AiQuizz.Games do
   @doc """
   Susbscribe a process to updates for the specified game.
   """
-  @spec subscribe(String.t(), String.t()) :: :ok
-  def subscribe(game_code, player_id) do
+  @spec subscribe(String.t(), GamePlayer.t()) :: :ok
+  def subscribe(game_code, player) do
     topic = "game:" <> game_code
 
     with :ok <- Phoenix.PubSub.subscribe(AiQuizz.PubSub, "proxy:#{topic}"),
-         {:ok, _} <- Presence.track(self(), topic, player_id, %{id: player_id}) do
+         {:ok, _} <- Presence.track(self(), topic, player.id, %{id: player.id, player: player}) do
       :ok
     end
   end
