@@ -129,7 +129,7 @@ defmodule AiQuizz.Games do
       {:error, reason}
 
   """
-  @spec join_game(String.t(), GamePlayer.t()) :: {:ok, GamePlayer.t()} | {:error, any()}
+  @spec join_game(String.t(), GamePlayer.t()) :: {:ok, String.t()} | {:error, any()}
   def join_game(game_id, %GamePlayer{} = player_params) do
     with {:ok, game_server} <- server(game_id),
          {:ok, _player} = join <- Server.join(game_server, player_params) do
@@ -189,12 +189,12 @@ defmodule AiQuizz.Games do
   @doc """
   Susbscribe a process to updates for the specified game.
   """
-  @spec subscribe(String.t(), GamePlayer.t()) :: :ok
-  def subscribe(game_code, player) do
+  @spec subscribe(String.t(), String.t()) :: :ok
+  def subscribe(game_code, player_id) do
     topic = "game:" <> game_code
 
     with :ok <- Phoenix.PubSub.subscribe(AiQuizz.PubSub, "proxy:#{topic}"),
-         {:ok, _} <- Presence.track(self(), topic, player.id, %{id: player.id, player: player}) do
+         {:ok, _} <- Presence.track(self(), topic, player_id, %{id: player_id}) do
       :ok
     end
   end

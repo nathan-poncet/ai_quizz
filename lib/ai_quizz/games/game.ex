@@ -60,11 +60,13 @@ defmodule AiQuizz.Games.Game do
   @doc """
   Join the game.
   """
-  @spec join(Game.t(), GamePlayer.t()) :: {:ok, Game.t(), GamePlayer.t()} | {:error, atom()}
+  @spec join(Game.t(), GamePlayer.t()) :: {:ok, Game.t(), String.t()} | {:error, atom()}
   def join(%Game{players: players} = game, %GamePlayer{} = player_params) do
     case GamePlayers.add_player(players, GamePlayer.new(player_params)) do
       {:ok, new_players, new_player} ->
-        {:ok, %Game{game | players: new_players}, new_player}
+        # TODO
+        %GamePlayer{new_player | answers: Enum.to_list(1..length(game.questions))}
+        {:ok, %Game{game | players: new_players}, new_player.id}
 
       {:error, reason} ->
         {:error, reason}

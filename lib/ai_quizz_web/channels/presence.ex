@@ -17,25 +17,25 @@ defmodule AiQuizzWeb.Presence do
     for {key, %{metas: [meta | metas]}} <- presences, into: %{} do
       # user can be populated here from the database here we populate
       # the name for demonstration purposes
-      {key, %{metas: [meta | metas], id: meta.id, user: meta.player}}
+      {key, %{metas: [meta | metas], id: meta.id}}
     end
   end
 
   def handle_metas(topic, %{joins: joins, leaves: leaves}, presences, state) do
-    for {user_id, presence} <- joins do
-      user_data = %{id: user_id, user: presence.user, metas: Map.fetch!(presences, user_id)}
+    for {user_id, _presence} <- joins do
+      user_data = %{id: user_id, metas: Map.fetch!(presences, user_id)}
       msg = {__MODULE__, {:join, user_data}}
       Phoenix.PubSub.local_broadcast(AiQuizz.PubSub, "proxy:#{topic}", msg)
     end
 
-    for {user_id, presence} <- leaves do
+    for {user_id, _presence} <- leaves do
       metas =
         case Map.fetch(presences, user_id) do
           {:ok, presence_metas} -> presence_metas
           :error -> []
         end
 
-      user_data = %{id: user_id, user: presence.user, metas: metas}
+      user_data = %{id: user_id, metas: metas}
       msg = {__MODULE__, {:leave, user_data}}
       Phoenix.PubSub.local_broadcast(AiQuizz.PubSub, "proxy:#{topic}", msg)
     end

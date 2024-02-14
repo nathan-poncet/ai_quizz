@@ -1,4 +1,5 @@
 defmodule AiQuizz.Games.GamePlayers do
+  require Logger
   alias AiQuizz.Games.GamePlayer
 
   @doc """
@@ -28,8 +29,7 @@ defmodule AiQuizz.Games.GamePlayers do
       username_exists?(players, player)
     } do
       {false, false, false} ->
-        players = players ++ [player]
-        {:ok, players, player}
+        {:ok, players ++ [player], player}
 
       {false, true, true} ->
         player = Enum.find(players, &(&1.user_id == player.user_id && &1.username == username))
