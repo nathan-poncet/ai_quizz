@@ -7,6 +7,7 @@ defmodule AiQuizz.Games.Game do
   alias AiQuizz.Games.{Game, GamePlayer, GameQuestion, GameQuestions}
 
   @id_length 16
+  @point_per_answer 1000
 
   @type t :: %__MODULE__{}
 
@@ -137,7 +138,8 @@ defmodule AiQuizz.Games.Game do
   """
   @spec next_status(Game.t()) :: Game.t()
   def next_status(%Game{timer: 0, status: :in_play_question} = game) do
-    %Game{game | timer: game.time_to_answer, status: :in_play_response}
+    timestamp = :os.system_time(:millisecond)
+    %Game{game | status: :in_play_response, timer: game.time_to_answer, timestamp: timestamp}
   end
 
   def next_status(%Game{timer: 0, status: :in_play_response} = game) do
@@ -165,9 +167,8 @@ defmodule AiQuizz.Games.Game do
   def start(%Game{players: [game_owner | _tail], status: :lobby} = game, player_id)
       when game_owner.id == player_id do
     %Game{time_per_question: timer} = game
-    timestamp = :os.system_time(:millisecond)
 
-    {:ok, %Game{game | status: :in_play_question, timer: timer, timestamp: timestamp}}
+    {:ok, %Game{game | status: :in_play_question, timer: timer}}
   end
 
   def start(%Game{players: [game_owner | _tail]}, player_id)
@@ -225,7 +226,10 @@ defmodule AiQuizz.Games.Game do
 
     game_player_answer = %Answer{time: time, status: status, value: answer}
 
-    calculated_score = calculate_score()
+    player = Enum.find(players, fn player -> player.id == player_id end)
+    winning_streak = GamePlayer.winning_streak(player)
+
+    calculated_score = calculate_score(game, status, time, winning_streak)
 
     new_players =
       players
@@ -236,7 +240,13 @@ defmodule AiQuizz.Games.Game do
   end
 
   # calculate the score for a player
-  def calculate_score() do
+  @spec calculate_score(Game.t(), Atom.t(), Integer.t(), Integer.t()) :: Float.t()
+  defp calculate_score(game, :correct, time, winning_streak) do
+    @point_per_answer * (1 - time * 0.5 / (game.time_to_answer * 1000)) *
+      (1 + winning_streak ** 1.3 * 0.1)
+  end
+
+  defp calculate_score(_game, _time, _status, _winning_streak) do
     0
   end
 

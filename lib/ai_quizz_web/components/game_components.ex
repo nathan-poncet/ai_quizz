@@ -99,7 +99,11 @@ defmodule AiQuizzWeb.GameComponents do
         </div>
 
         <div class="flex-1 text-lg decoration-2 truncate">
-          <%= player.answers |> Enum.at(@game.current_question) %>
+          <%= Enum.at(player.answers, @game.current_question).value %>
+        </div>
+
+        <div class="flex-1 text-lg decoration-2 truncate">
+          <%= player.score %>
         </div>
       </div>
     </div>

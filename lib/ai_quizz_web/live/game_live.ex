@@ -15,15 +15,8 @@ defmodule AiQuizzWeb.GameLive do
     assigns =
       assign(
         assigns,
-        current_question: Enum.at(assigns.game.questions, assigns.game.current_question),
-        response:
-          case Enum.find(assigns.game.players, &(&1.id == assigns.player_id)) do
-            nil ->
-              ""
-
-            player ->
-              player.answers |> Enum.at(assigns.game.current_question)
-          end
+        current_question: current_question(assigns),
+        response: response(assigns)
       )
 
     ~H"""
@@ -195,13 +188,6 @@ defmodule AiQuizzWeb.GameLive do
   defp indicator_size(:medium), do: "text-xl"
   defp indicator_size(:xlarge), do: "text-3xl"
 
-  @spec find_current_user(map) :: User.t()
-  defp find_current_user(session) do
-    with user_token when not is_nil(user_token) <- session["user_token"],
-         %User{} = user <- Accounts.get_user_by_session_token(user_token),
-         do: user
-  end
-
   @spec create_player_params(Phoenix.LiveView.Socket.t()) :: GamePlayer.t()
   defp create_player_params(socket) when socket.assigns.current_user != nil do
     %GamePlayer{
@@ -215,6 +201,18 @@ defmodule AiQuizzWeb.GameLive do
     %GamePlayer{socket_id: socket.id, username: "Random:#{socket.id}"}
   end
 
+  @spec current_question(map) :: GameQuestion.t()
+  defp current_question(assigns) do
+    Enum.at(assigns.game.questions, assigns.game.current_question) || %Games.GameQuestion{}
+  end
+
+  @spec find_current_user(map) :: User.t()
+  defp find_current_user(session) do
+    with user_token when not is_nil(user_token) <- session["user_token"],
+         %User{} = user <- Accounts.get_user_by_session_token(user_token),
+         do: user
+  end
+
   @spec get_game(Phoenix.LiveView.Socket.t(), String.t()) :: Phoenix.LiveView.Socket.t()
   defp get_game(socket, game_code) do
     case Games.get_game(game_code) do
@@ -225,6 +223,17 @@ defmodule AiQuizzWeb.GameLive do
         socket
         |> put_flash(:error, "Failed to get game: #{inspect(reason)}")
         |> redirect(to: ~p"/")
+    end
+  end
+
+  @spec response(map) :: String.t() | nil
+  defp response(assigns) do
+    case Enum.find(assigns.game.players, &(&1.id == assigns.player_id)) do
+      player when is_map(player) ->
+        Enum.at(player.answers, assigns.game.current_question).value
+
+      _ ->
+        nil
     end
   end
 end
