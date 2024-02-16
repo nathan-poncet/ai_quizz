@@ -27,7 +27,7 @@ defmodule AiQuizz.Games.GameTest do
   end
 
   test "start" do
-    game = %Game{status: :lobby, time_per_question: 10_000}
+    game = %Game{status: :lobby, time_display_question: 10_000}
     assert {:ok, %Game{status: :in_play}} = Game.start(game)
   end
 

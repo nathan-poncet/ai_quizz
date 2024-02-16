@@ -13,7 +13,7 @@ defmodule AiQuizz.Games.GamePlayer do
     field :socket_id, :string, default: ""
     field :user_id, :string, default: ""
     field :username, :string, default: ""
-    embeds_many(:answers, Answer)
+    embeds_many :answers, Answer
   end
 
   defmodule Answer do

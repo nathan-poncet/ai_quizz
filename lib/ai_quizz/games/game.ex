@@ -23,8 +23,7 @@ defmodule AiQuizz.Games.Game do
 
     field :timer, :integer, default: 0
     field :timestamp, :integer, default: 0
-    field :time_per_question, :integer, default: 5
-    field :time_to_answer, :integer, default: 5
+    field :time_display_question, :integer, default: 5
     field :topic, :string
 
     embeds_many :players, GamePlayer
@@ -106,7 +105,7 @@ defmodule AiQuizz.Games.Game do
       )
       when current_question < length(questions) - 1 and
              owner_player.id == player_id do
-    %Game{time_per_question: timer} = game
+    %Game{time_display_question: timer} = game
     current_question = current_question + 1
 
     {:ok,
@@ -139,7 +138,10 @@ defmodule AiQuizz.Games.Game do
   @spec next_status(Game.t()) :: Game.t()
   def next_status(%Game{timer: 0, status: :in_play_question} = game) do
     timestamp = :os.system_time(:millisecond)
-    %Game{game | status: :in_play_response, timer: game.time_to_answer, timestamp: timestamp}
+    %Game{current_question: current_question, questions: questions} = game
+    %GameQuestion{time_limit: timer} = Enum.at(questions, current_question)
+
+    %Game{game | status: :in_play_response, timer: timer, timestamp: timestamp}
   end
 
   def next_status(%Game{timer: 0, status: :in_play_response} = game) do
@@ -166,7 +168,7 @@ defmodule AiQuizz.Games.Game do
   @spec start(Game.t(), String.t()) :: {:ok, Game.t()} | {:error, atom()}
   def start(%Game{players: [game_owner | _tail], status: :lobby} = game, player_id)
       when game_owner.id == player_id do
-    %Game{time_per_question: timer} = game
+    %Game{time_display_question: timer} = game
 
     {:ok, %Game{game | status: :in_play_question, timer: timer}}
   end
@@ -197,23 +199,6 @@ defmodule AiQuizz.Games.Game do
     |> validate_length(:topic, max: 160)
   end
 
-  @doc """
-  Update the game.
-  """
-  def update_changeset(game, attrs) do
-    game
-    |> cast(attrs, [
-      :time_per_question,
-      :time_to_answer
-    ])
-    |> validate_required([
-      :time_per_question,
-      :time_to_answer
-    ])
-    |> validate_number(:time_per_question, greater_than_or_equal_to: 0)
-    |> validate_number(:time_to_answer, greater_than_or_equal_to: 0)
-  end
-
   # Private functions
 
   @spec add_answer(Game.t(), String.t(), String.t()) :: Game.t()
@@ -228,8 +213,15 @@ defmodule AiQuizz.Games.Game do
 
     player = Enum.find(players, fn player -> player.id == player_id end)
     winning_streak = GamePlayer.winning_streak(player)
+    %GameQuestion{time_limit: time_limit} = Enum.at(questions, current_question)
 
-    calculated_score = calculate_score(game, status, time, winning_streak)
+    calculated_score =
+      calculate_score(%{
+        status: status,
+        time: time,
+        time_limit: time_limit,
+        winning_streak: winning_streak
+      })
 
     new_players =
       players
@@ -240,13 +232,18 @@ defmodule AiQuizz.Games.Game do
   end
 
   # calculate the score for a player
-  @spec calculate_score(Game.t(), Atom.t(), Integer.t(), Integer.t()) :: Float.t()
-  defp calculate_score(game, :correct, time, winning_streak) do
-    @point_per_answer * (1 - time * 0.5 / (game.time_to_answer * 1000)) *
+  @spec calculate_score(map()) :: Integer.t()
+  defp calculate_score(%{
+         status: :correct,
+         time: time,
+         time_limit: time_limit,
+         winning_streak: winning_streak
+       }) do
+    @point_per_answer * (1 - time * 0.5 / (time_limit * 1000)) *
       (1 + winning_streak ** 1.3 * 0.1)
   end
 
-  defp calculate_score(_game, _time, _status, _winning_streak) do
+  defp calculate_score(_params) do
     0
   end
 
