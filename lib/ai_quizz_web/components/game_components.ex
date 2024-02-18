@@ -82,6 +82,27 @@ defmodule AiQuizzWeb.GameComponents do
         <%= option %>
       </button>
     </div>
+
+    <%!-- Spacer --%>
+    <div class="h-8"></div>
+
+    <div
+      :if={@game.status == :in_play_response and @game.timer < @current_question.time_limit / 3}
+      class="text-center"
+    >
+      <div class="text-xl font-bold text-cyan-400">
+        <%= "Hint: " <> @current_question.advice %>
+      </div>
+    </div>
+
+    <div :if={@game.status == :in_result} class="text-center">
+      <div class="text-xl font-bold">
+        <%= "Correct answer: " <> @current_question.answer %>
+      </div>
+      <div class="text-xl font-bold">
+        <%= "Explanation: " <> @current_question.explanation %>
+      </div>
+    </div>
     """
   end
 

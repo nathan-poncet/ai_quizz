@@ -17,7 +17,7 @@ defmodule AiQuizzWeb.CreateGameLive do
         method="post"
         class="space-y-4 mx-auto"
       >
-        <.input field={@form[:code]} type="text" label="code" />
+        <.input field={@form[:code]} type="hidden" />
 
         <.input field={@form[:topic]} type="text" label="Topic" required />
         <.input
