@@ -3,6 +3,7 @@ defmodule AiQuizzWeb.GameComponents do
   Provides UI components for the game screen.
   """
 
+  alias AiQuizz.Games.GamePlayer.Answer
   use AiQuizzWeb, :html
   alias AiQuizz.Games.Game
 
@@ -45,7 +46,7 @@ defmodule AiQuizzWeb.GameComponents do
   """
   attr :game, Game, required: true
   attr :current_question, :map, required: true
-  attr :response, :string, required: true
+  attr :current_player_answer, Answer, required: true
 
   @spec question(map) :: Phoenix.LiveView.Rendered.t()
   def question(assigns) do
@@ -69,10 +70,12 @@ defmodule AiQuizzWeb.GameComponents do
         phx-value-answer={option}
         class={[
           "text-4xl font-bold p-4 border border-black	rounded",
-          @response == option && "bg-black text-white",
+          @current_player_answer.value == option && "bg-black text-white",
           @game.status == :in_result && "cursor-default",
           @game.status == :in_result && @current_question.answer == option && "bg-green-400",
-          @game.status == :in_result && @response == option && @current_question.answer != option &&
+          @game.status == :in_result &&
+            @current_player_answer.value == option &&
+            @current_question.answer != option &&
             "bg-red-400"
         ]}
       >
@@ -88,8 +91,8 @@ defmodule AiQuizzWeb.GameComponents do
   attr :game, Game, required: true
   attr :player_id, :integer, required: true
 
-  @spec response(map) :: Phoenix.LiveView.Rendered.t()
-  def response(assigns) do
+  @spec responses(map) :: Phoenix.LiveView.Rendered.t()
+  def responses(assigns) do
     ~H"""
     <div :if={@game.status == :in_result}>
       <div class="text-4xl font-bold">Responses</div>
@@ -103,7 +106,7 @@ defmodule AiQuizzWeb.GameComponents do
         </div>
 
         <div class="flex-1 text-lg decoration-2 truncate">
-          <%= player.score %>
+          <%= Enum.at(player.answers, @game.current_question).score %>
         </div>
       </div>
     </div>
@@ -114,6 +117,7 @@ defmodule AiQuizzWeb.GameComponents do
   Renders users scores.
   """
   attr :game, Game, required: true
+  attr :player_id, :integer, required: true
 
   @spec score(map) :: Phoenix.LiveView.Rendered.t()
   def score(assigns) do
@@ -125,11 +129,11 @@ defmodule AiQuizzWeb.GameComponents do
         class="flex flex-row items-center justify-center"
       >
         <div class="flex-1 text-lg decoration-2 truncate">
-          <%= player.username %>
+          <%= if player.id == @player_id, do: "You", else: player.username %>
         </div>
 
         <div class="flex-1 text-lg decoration-2 truncate">
-          <%= player.score %>
+          <%= Enum.reduce(player.answers, 0, fn answer, acc -> (answer.score || 0) + acc end) %>
         </div>
       </div>
     </div>

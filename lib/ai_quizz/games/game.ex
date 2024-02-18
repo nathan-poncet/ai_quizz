@@ -2,6 +2,7 @@ defmodule AiQuizz.Games.Game do
   use Ecto.Schema
   import Ecto.Changeset
 
+  require Logger
   alias AiQuizz.Games.GamePlayer.Answer
   alias AiQuizz.Games.GamePlayers
   alias AiQuizz.Games.{Game, GamePlayer, GameQuestion, GameQuestions}
@@ -16,6 +17,7 @@ defmodule AiQuizz.Games.Game do
     field :current_question, :integer, default: 0
     field :difficulty, Ecto.Enum, values: [:easy, :medium, :hard, :genius, :godlike]
     field :nb_questions, :integer
+    field :password, :string, default: nil
 
     field :status, Ecto.Enum,
       values: [:lobby, :in_play_question, :in_play_response, :in_result, :finished],
@@ -76,8 +78,10 @@ defmodule AiQuizz.Games.Game do
   @doc """
   Join the game.
   """
-  @spec join(Game.t(), GamePlayer.t()) :: {:ok, Game.t(), String.t()} | {:error, atom()}
-  def join(%Game{} = game, %GamePlayer{} = player_params) do
+  @spec join(Game.t(), String.t(), GamePlayer.t()) ::
+          {:ok, Game.t(), String.t()} | {:error, atom()}
+  def join(%Game{password: game_password} = game, password, %GamePlayer{} = player_params)
+      when game_password == password or game_password == nil do
     %Game{players: players} = game
     player = GamePlayer.new(game, player_params)
 
@@ -89,6 +93,9 @@ defmodule AiQuizz.Games.Game do
         {:error, reason}
     end
   end
+
+  def join(_game, _player_params, _password),
+    do: {:error, :wrong_password}
 
   @doc """
   Next question.
@@ -103,8 +110,7 @@ defmodule AiQuizz.Games.Game do
         } = game,
         player_id
       )
-      when current_question < length(questions) - 1 and
-             owner_player.id == player_id do
+      when current_question < length(questions) - 1 and owner_player.id == player_id do
     %Game{time_display_question: timer} = game
     current_question = current_question + 1
 
@@ -152,12 +158,21 @@ defmodule AiQuizz.Games.Game do
   Create a new game.
   """
   @spec register(map()) :: Game.t()
-  def register(%{topic: topic, difficulty: difficulty, nb_questions: nb_questions} = params) do
+  def register(
+        %{topic: topic, difficulty: difficulty, nb_questions: nb_questions} =
+          params
+      ) do
+    password =
+      if Map.has_key?(params, :password),
+        do: params.password,
+        else: nil
+
     %Game{
       code: uuid(),
       topic: topic,
       difficulty: difficulty,
       nb_questions: nb_questions,
+      password: password,
       questions: GameQuestions.generate(params)
     }
   end
@@ -188,7 +203,8 @@ defmodule AiQuizz.Games.Game do
     |> cast(attrs, [
       :difficulty,
       :nb_questions,
-      :topic
+      :topic,
+      :password
     ])
     |> validate_required([
       :difficulty,
@@ -197,25 +213,30 @@ defmodule AiQuizz.Games.Game do
     ])
     |> validate_number(:nb_questions, greater_than_or_equal_to: 1)
     |> validate_length(:topic, max: 160)
+    |> validate_length(:password, max: 160)
   end
 
   # Private functions
 
   @spec add_answer(Game.t(), String.t(), String.t()) :: Game.t()
   defp add_answer(%Game{} = game, player_id, answer) do
-    %Game{current_question: current_question, players: players, questions: questions} = game
+    %Game{
+      current_question: current_question,
+      players: players,
+      questions: questions,
+      timestamp: timestamp
+    } = game
+
     now = :os.system_time(:millisecond)
-    time = now - game.timestamp
+    time = now - timestamp
     is_correct = answer == Enum.at(questions, current_question).answer
     status = if is_correct, do: :correct, else: :wrong
-
-    game_player_answer = %Answer{time: time, status: status, value: answer}
 
     player = Enum.find(players, fn player -> player.id == player_id end)
     winning_streak = GamePlayer.winning_streak(player)
     %GameQuestion{time_limit: time_limit} = Enum.at(questions, current_question)
 
-    calculated_score =
+    score =
       calculate_score(%{
         status: status,
         time: time,
@@ -223,10 +244,9 @@ defmodule AiQuizz.Games.Game do
         winning_streak: winning_streak
       })
 
-    new_players =
-      players
-      |> GamePlayers.add_answer(player_id, current_question, game_player_answer)
-      |> GamePlayers.update_score(player_id, calculated_score)
+    answer = %Answer{score: score, status: status, time: time, value: answer}
+
+    new_players = GamePlayers.add_answer(players, player_id, current_question, answer)
 
     %Game{game | players: new_players}
   end

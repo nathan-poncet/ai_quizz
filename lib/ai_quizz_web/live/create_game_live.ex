@@ -1,4 +1,5 @@
 defmodule AiQuizzWeb.CreateGameLive do
+  require Logger
   alias AiQuizz.Games.Game
   alias AiQuizz.Games
   use AiQuizzWeb, :live_view
@@ -9,10 +10,15 @@ defmodule AiQuizzWeb.CreateGameLive do
       <.form
         for={@form}
         id="create_game_form"
-        phx-submit="submit"
+        phx-submit="save"
         phx-change="validate"
+        phx-trigger-action={@trigger_submit}
+        action={~p"/games/create_or_join"}
+        method="post"
         class="space-y-4 mx-auto"
       >
+        <.input field={@form[:code]} type="text" label="code" />
+
         <.input field={@form[:topic]} type="text" label="Topic" required />
         <.input
           field={@form[:difficulty]}
@@ -29,6 +35,15 @@ defmodule AiQuizzWeb.CreateGameLive do
         />
 
         <.input field={@form[:nb_questions]} type="number" label="Number of questions" required />
+
+        <.input
+          label="Private"
+          name="is_private"
+          phx-click="toggle_private"
+          type="checkbox"
+          value={@is_private}
+        />
+        <.input :if={@is_private} field={@form[:password]} type="password" label="Password" required />
 
         <.button phx-disable-with="Create game..." class="w-full">
           Create Game
@@ -69,20 +84,27 @@ defmodule AiQuizzWeb.CreateGameLive do
     socket =
       socket
       |> assign_async(:topics, fn -> {:ok, %{topics: Games.topics_generate([])}} end)
-      |> assign(:form, to_form(changeset))
+      |> assign(
+        is_private: false,
+        form: to_form(changeset),
+        trigger_submit: false
+      )
 
     {:ok, socket}
   end
 
-  def handle_event("validate", %{"game" => game}, socket) do
-    changeset = Games.change_game_registration(%Game{}, game)
-    {:noreply, assign(socket, :form, to_form(Map.put(changeset, :action, :validate)))}
+  def handle_event("toggle_private", _, socket) do
+    {:noreply, assign(socket, is_private: !socket.assigns.is_private)}
   end
 
-  def handle_event("submit", %{"game" => game}, socket) do
-    case Games.create_game(game) do
+  def handle_event("save", %{"game" => game_params}, socket) do
+    case Games.create_game(game_params) do
       {:ok, game} ->
-        {:noreply, push_navigate(socket, to: ~p"/games/#{game.code}")}
+        changeset = Games.change_game_registration(game)
+
+        send(self(), :send_form)
+
+        {:noreply, assign(socket, :form, to_form(changeset))}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset))}
@@ -90,5 +112,14 @@ defmodule AiQuizzWeb.CreateGameLive do
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, reason)}
     end
+  end
+
+  def handle_event("validate", %{"game" => game}, socket) do
+    changeset = Games.change_game_registration(%Game{}, game)
+    {:noreply, assign(socket, :form, to_form(Map.put(changeset, :action, :validate)))}
+  end
+
+  def handle_info(:send_form, socket) do
+    {:noreply, socket |> assign(:trigger_submit, true)}
   end
 end

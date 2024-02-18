@@ -8,8 +8,18 @@ defmodule AiQuizzWeb.JoinGameLive do
   def render(assigns) do
     ~H"""
     <div class="flex justify-center items-center h-full">
-      <.form for={@form} id="join_game_form" phx-submit="submit" class="space-y-4">
-        <.input field={@form[:id]} type="text" label="Game ID" required />
+      <.form
+        for={@form}
+        id="join_game_form"
+        phx-submit="save"
+        phx-trigger-action={@trigger_submit}
+        action={~p"/games/create_or_join"}
+        method="post"
+        class="space-y-4"
+      >
+        <.input field={@form[:code]} type="text" label="Code" required />
+        <.input field={@form[:password]} type="password" label="Password" />
+
         <.button phx-disable-with="Joining game..." class="w-full">
           Join game
         </.button>
@@ -19,21 +29,19 @@ defmodule AiQuizzWeb.JoinGameLive do
   end
 
   def mount(_params, _session, socket) do
-    form = to_form(%{"id" => ""}, as: :join_game)
+    form = to_form(%{"id" => ""}, as: :game)
 
-    {:ok, assign(socket, form: form) |> assign(:counter, 0), temporary_assigns: [form: form]}
+    {:ok, assign(socket, form: form, trigger_submit: false), temporary_assigns: [form: form]}
   end
 
-  def handle_event("submit", %{"join_game" => %{"id" => id}}, socket) do
-    Logger.debug("Joining gameeeeee #{id}", game_id: id)
-
-    case Games.get_game(id) do
+  def handle_event("save", %{"game" => %{"code" => code}}, socket) do
+    case Games.get_game(code) do
       {:ok, game} ->
-        Logger.debug("Joining game #{id}", game_id: id)
-        {:noreply, push_navigate(socket, to: ~p"/games/#{game.code}")}
+        Logger.debug("Joining game #{game.code}", game_code: game.code)
+        {:noreply, socket |> assign(trigger_submit: true)}
 
       {:error, _reason} ->
-        {:noreply, socket |> put_flash(:error, "Game with id: '#{id}' doesn't exist")}
+        {:noreply, socket |> put_flash(:error, "Game with id: '#{code}' doesn't exist")}
     end
   end
 end

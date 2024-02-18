@@ -20,10 +20,13 @@ defmodule AiQuizzWeb.Router do
   scope "/", AiQuizzWeb do
     pipe_through [:browser, :fetch_current_user]
 
+    post "/games/create_or_join", GameSessionController, :create_or_join
+
     live "/", HomeLive
-    live "/join-game", JoinGameLive
-    live "/create-game", CreateGameLive
-    live "/games/:id", GameLive
+    live "/games/join-game", JoinGameLive
+    live "/games/create-game", CreateGameLive
+    live "/games/:code", GameLive
+
     # get "/", PageController, :home
   end
 

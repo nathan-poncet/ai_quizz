@@ -54,6 +54,7 @@ defmodule AiQuizz.Games do
       {:error, reason}
 
   """
+  @spec create_game(map) :: {:ok, Game.t()} | {:error, any()}
   def create_game(attrs \\ %{}) do
     changeset = Game.registration_changeset(%Game{}, attrs)
     do_create_game(changeset)
@@ -143,10 +144,10 @@ defmodule AiQuizz.Games do
       {:error, reason}
 
   """
-  @spec join_game(String.t(), GamePlayer.t()) :: {:ok, String.t()} | {:error, any()}
-  def join_game(game_id, %GamePlayer{} = player_params) do
+  @spec join_game(String.t(), String.t(), GamePlayer.t()) :: {:ok, String.t()} | {:error, any()}
+  def join_game(game_id, password, %GamePlayer{} = player_params) do
     with {:ok, game_server} <- server(game_id),
-         {:ok, _player} = join <- Server.join(game_server, player_params) do
+         {:ok, _player} = join <- Server.join(game_server, password, player_params) do
       Process.monitor(game_server)
       join
     else

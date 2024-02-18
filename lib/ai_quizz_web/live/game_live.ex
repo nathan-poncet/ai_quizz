@@ -1,4 +1,5 @@
 defmodule AiQuizzWeb.GameLive do
+  alias AiQuizz.Games.GamePlayer.Answer
   alias AiQuizz.Accounts
   alias AiQuizz.Accounts.User
   alias AiQuizz.Games.GamePlayer
@@ -16,7 +17,7 @@ defmodule AiQuizzWeb.GameLive do
       assign(
         assigns,
         current_question: current_question(assigns),
-        response: response(assigns)
+        current_player_answer: current_player_answer(assigns)
       )
 
     ~H"""
@@ -40,16 +41,20 @@ defmodule AiQuizzWeb.GameLive do
     <div class="h-8"></div>
 
     <%!-- Question --%>
-    <GameComponents.question game={@game} current_question={@current_question} response={@response} />
+    <GameComponents.question
+      game={@game}
+      current_question={@current_question}
+      current_player_answer={@current_player_answer}
+    />
 
     <%!-- Spacer --%>
     <div class="h-8"></div>
 
     <%!-- Response --%>
-    <GameComponents.response game={@game} player_id={@player_id} />
+    <GameComponents.responses game={@game} player_id={@player_id} />
 
     <%!-- Score --%>
-    <GameComponents.score game={@game} />
+    <GameComponents.score game={@game} player_id={@player_id} />
 
     <%!-- Spacer --%>
     <div class="h-8"></div>
@@ -58,7 +63,7 @@ defmodule AiQuizzWeb.GameLive do
     """
   end
 
-  def mount(%{"id" => game_code}, session, socket) do
+  def mount(%{"code" => game_code}, session, socket) do
     socket =
       socket
       |> assign(player_id: nil, presences: [])
@@ -67,7 +72,7 @@ defmodule AiQuizzWeb.GameLive do
     socket =
       if connected?(socket) do
         socket =
-          case Games.join_game(game_code, create_player_params(socket)) do
+          case Games.join_game(game_code, session["game_password"], create_player_params(socket)) do
             {:ok, player_id} ->
               :ok = Games.subscribe(game_code, player_id)
               assign(socket, :player_id, player_id)
@@ -226,14 +231,14 @@ defmodule AiQuizzWeb.GameLive do
     end
   end
 
-  @spec response(map) :: String.t() | nil
-  defp response(assigns) do
+  @spec current_player_answer(map) :: String.t() | nil
+  defp current_player_answer(assigns) do
     case Enum.find(assigns.game.players, &(&1.id == assigns.player_id)) do
       player when is_map(player) ->
-        Enum.at(player.answers, assigns.game.current_question).value
+        Enum.at(player.answers, assigns.game.current_question)
 
       _ ->
-        nil
+        %Answer{}
     end
   end
 end

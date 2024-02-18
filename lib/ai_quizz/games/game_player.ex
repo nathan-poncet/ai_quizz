@@ -24,7 +24,13 @@ defmodule AiQuizz.Games.GamePlayer do
     embedded_schema do
       field :value, :string, default: nil
       field :time, :integer, default: 0
+      field :score, :integer, default: 0
       field :status, Ecto.Enum, values: [:pending, :correct, :wrong], default: :pending
+    end
+    
+    @spec new() :: Answer.t()
+    def new() do
+      %Answer{}
     end
   end
 

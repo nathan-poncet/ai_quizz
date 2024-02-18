@@ -34,9 +34,10 @@ defmodule AiQuizz.Games.Server do
   @spec game(GenServer.server()) :: Game.t()
   def game(game_server), do: GenServer.call(game_server, :game)
 
-  @spec join(GenServer.server(), GamePlayer.t()) :: {:ok, String.t()} | {:error, atom()}
-  def join(game_server, %GamePlayer{} = player_params),
-    do: GenServer.call(game_server, {:join, player_params})
+  @spec join(GenServer.server(), String.t(), GamePlayer.t()) ::
+          {:ok, String.t()} | {:error, atom()}
+  def join(game_server, password, %GamePlayer{} = player_params),
+    do: GenServer.call(game_server, {:join, password, player_params})
 
   @spec next_question(GenServer.server(), String.t()) :: {:ok, Game.t()} | {:error, atom()}
   def next_question(game_server, player_id),
@@ -76,8 +77,8 @@ defmodule AiQuizz.Games.Server do
 
   def handle_call(:game, _from, game), do: {:reply, game, game}
 
-  def handle_call({:join, %GamePlayer{} = player_params}, _from, game) do
-    case Game.join(game, player_params) do
+  def handle_call({:join, password, %GamePlayer{} = player_params}, _from, game) do
+    case Game.join(game, password, player_params) do
       {:ok, game, player_id} ->
         broadcast(game.code, :game_update, game)
         {:reply, {:ok, player_id}, game}
