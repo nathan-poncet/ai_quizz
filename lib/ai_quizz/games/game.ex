@@ -248,7 +248,11 @@ defmodule AiQuizz.Games.Game do
 
     new_players = GamePlayers.add_answer(players, player_id, current_question, answer)
 
-    %Game{game | players: new_players}
+    if is_last_player_answered?(new_players, current_question) do
+      %Game{game | players: new_players, timer: 0}
+    else
+      %Game{game | players: new_players}
+    end
   end
 
   # calculate the score for a player
@@ -265,6 +269,10 @@ defmodule AiQuizz.Games.Game do
 
   defp calculate_score(_params) do
     0
+  end
+
+  defp is_last_player_answered?(players, current_question) do
+    Enum.all?(players, fn player -> Enum.at(player.answers, current_question).value != nil end)
   end
 
   @spec uuid() :: String.t()

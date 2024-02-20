@@ -50,6 +50,13 @@ defmodule AiQuizzWeb.CreateGameLive do
         </.button>
       </.form>
 
+      <%!-- Divider --%>
+      <div class="flex items-center justify-center space-x-4">
+        <hr class="w-1/4 border-t-2 border-gray-300" />
+        <p class="text-gray-500">or</p>
+        <hr class="w-1/4 border-t-2 border-gray-300" />
+      </div>
+
       <.async_result :let={topics} assign={@topics}>
         <:loading>
           <p>Loading topics...</p>
@@ -58,21 +65,25 @@ defmodule AiQuizzWeb.CreateGameLive do
           <p>there was an error loading the topics</p>
         </:failed>
 
-        <div class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));">
-          <article :for={topic <- topics} class="group">
-            <img
-              alt="Lava"
-              src={topic["img"]}
-              class="h-56 w-full rounded-xl object-cover shadow-xl transition group-hover:grayscale-[50%]"
-            />
+        <.button phx-click="random-topic" class="block mx-auto">
+          Surprise me !
+        </.button>
 
-            <div class="p-4">
-              <a href="#">
-                <h3 class="text-lg font-medium text-gray-900"><%= topic["title"] %></h3>
-              </a>
-            </div>
-          </article>
+        <div class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));">
+          <button
+            :for={topic <- topics}
+            phx-click="topic"
+            phx-value-topic={topic}
+            class="p-4 rounded-lg border border-black"
+          >
+            <h3 class="text-lg font-medium text-gray-900"><%= topic %></h3>
+          </button>
         </div>
+
+        <%!-- Load More --%>
+        <.button phx-click="load-more" phx-disable-with="Loading..." class="w-full">
+          Load More
+        </.button>
       </.async_result>
     </div>
     """
@@ -93,9 +104,42 @@ defmodule AiQuizzWeb.CreateGameLive do
     {:ok, socket}
   end
 
-  def handle_event("toggle_private", _, socket) do
-    {:noreply, assign(socket, is_private: !socket.assigns.is_private)}
+  def handle_event("random-topic", _params, socket) do
+    game =
+      Map.merge(socket.assigns.form.params, %{
+        "topic" => Enum.random(socket.assigns.topics.result),
+        "difficulty" => Enum.random([:easy, :medium, :hard, :genius, :godlike]),
+        "nb_questions" => Enum.random(4..25)
+      })
+
+    changeset =
+      Games.change_game_registration(%Game{}, game)
+
+    {:noreply, assign(socket, form: to_form(changeset))}
   end
+
+  def handle_event("topic", %{"topic" => topic}, socket) do
+    game = Map.merge(socket.assigns.form.params, %{"topic" => topic})
+
+    changeset =
+      Games.change_game_registration(%Game{}, game)
+
+    {:noreply, assign(socket, form: to_form(changeset))}
+  end
+
+  def handle_event("load-more", _, socket) do
+    new_topics = Games.topics_generate(socket.assigns.topics.result)
+
+    topics = socket.assigns.topics.result ++ new_topics
+
+    socket =
+      socket |> assign_async(:topics, fn -> {:ok, %{topics: topics}} end)
+
+    {:noreply, socket}
+  end
+
+  def handle_event("toggle_private", _, socket),
+    do: {:noreply, assign(socket, is_private: !socket.assigns.is_private)}
 
   def handle_event("save", %{"game" => game_params}, socket) do
     case Games.create_game(game_params) do
@@ -119,7 +163,5 @@ defmodule AiQuizzWeb.CreateGameLive do
     {:noreply, assign(socket, :form, to_form(Map.put(changeset, :action, :validate)))}
   end
 
-  def handle_info(:send_form, socket) do
-    {:noreply, socket |> assign(:trigger_submit, true)}
-  end
+  def handle_info(:send_form, socket), do: {:noreply, socket |> assign(:trigger_submit, true)}
 end

@@ -1,5 +1,6 @@
 defmodule AiQuizz.Games do
   require Logger
+  alias AiQuizz.Games.GameTopics
   alias AiQuizz.Games.GamePlayer
   alias AiQuizzWeb.Presence
   alias Ecto.Changeset
@@ -226,17 +227,8 @@ defmodule AiQuizz.Games do
     end
   end
 
-  def topics_generate(_topics) do
-    #  Topics.generate(topics)
-    [
-      %{"title" => "maths", "img" => "https://picsum.photos/seed/maths/200/300"},
-      %{"title" => "history", "img" => "https://picsum.photos/seed/history/200/300"},
-      %{"title" => "geography", "img" => "https://picsum.photos/seed/geography/200/300"},
-      %{"title" => "science", "img" => "https://picsum.photos/seed/science/200/300"},
-      %{"title" => "sport", "img" => "https://picsum.photos/seed/sport/200/300"},
-      %{"title" => "music", "img" => "https://picsum.photos/seed/music/200/300"},
-      %{"title" => "cinema", "img" => "https://picsum.photos/seed/cinema/200/300"}
-    ]
+  def topics_generate(topics) do
+    GameTopics.generate(topics)
   end
 
   # Private functions

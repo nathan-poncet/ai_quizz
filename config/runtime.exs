@@ -114,4 +114,14 @@ if config_env() == :prod do
   #     config :swoosh, :api_client, Swoosh.ApiClient.Hackney
   #
   # See https://hexdocs.pm/swoosh/Swoosh.html#module-installation for details.
+
+  config :ai_quizz, AiQuizz.Mailer, adapter: Swoosh.Adapters.Local
+  config :swoosh, local: true
+
+  # ## Configuring the cluster
+  config :ai_quizz, dns_cluster_query: System.get_env("DNS_CLUSTER_QUERY")
 end
+
+config :openai,
+  api_key: System.get_env("OPENAI_API_KEY"),
+  http_options: [recv_timeout: 30_000]

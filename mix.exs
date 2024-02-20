@@ -19,7 +19,7 @@ defmodule AiQuizz.MixProject do
   def application do
     [
       mod: {AiQuizz.Application, []},
-      extra_applications: [:logger, :observer, :wx, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools]
     ]
   end
 

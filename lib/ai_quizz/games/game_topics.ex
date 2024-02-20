@@ -11,16 +11,10 @@ defmodule AiQuizz.Games.GameTopics do
             content: "
             You are a quizz expert capable to create a list of topics for a quiz.
             The user will pass a list of topics already used, so you have to generate a list of different topics.
-            You must provide at least 5 topics.
+            You must provide at least 10 topics.
             Be creative with your topics, you can use any topic you want.
-            You must generate images to illustrate each topic.
             Respond with a JSON object like this exemple:
-            topics: [
-              {title: 'maths', img: 'fill_with_img_url'},
-              {title: 'history', img: 'fill_with_img_url'},
-              {title: 'geography', img: 'fill_with_img_url'},
-              {title: 'science', img: 'fill_with_img_url'}
-            ]
+            topics: ['maths', 'history', 'geography', 'science', 'sports']
             "
           },
           %{
